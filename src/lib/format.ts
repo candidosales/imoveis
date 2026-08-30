@@ -1,3 +1,12 @@
+export const SOURCE_LABELS: Record<string, string> = {
+	zap: "ZAP",
+	vivareal: "Viva Real",
+	olx: "OLX",
+	ergue: "Ergue",
+	habitat: "Habitat",
+	tavares: "Tavares",
+};
+
 export function formatPriceBRL(cents: number | null): string {
 	if (cents === null) return "Sob consulta";
 	return (cents / 100).toLocaleString("pt-BR", {

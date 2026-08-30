@@ -6,7 +6,7 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Slider } from "#/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
-import { formatPriceBRL } from "#/lib/format";
+import { formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
 import type { ImovelType, ListingWithPlaces } from "#/server/db/types";
 import { setFavorite } from "#/server/functions/set-favorite";
 
@@ -22,15 +22,6 @@ const BEDROOMS_TODOS = "todos";
 const PRAIA_MAX_DEFAULT = 30;
 const COMODIDADE_MAX_DEFAULT = 15;
 const PRICE_CAP_CENTS = 700_000_00;
-
-const SOURCE_LABELS: Record<string, string> = {
-	zap: "ZAP",
-	vivareal: "Viva Real",
-	olx: "OLX",
-	ergue: "Ergue",
-	habitat: "Habitat",
-	tavares: "Tavares",
-};
 
 export function ListingsExplorer({
 	listings,
@@ -347,7 +338,11 @@ export function ListingsExplorer({
 			) : (
 				<ClientOnly fallback={<MapLoading />}>
 					<Suspense fallback={<MapLoading />}>
-						<ListingsMap listings={filtered} />
+						<ListingsMap
+							listings={filtered}
+							favoriteIds={favoriteIds}
+							onToggleFavorite={toggleFavorite}
+						/>
 					</Suspense>
 				</ClientOnly>
 			)}

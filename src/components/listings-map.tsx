@@ -4,8 +4,10 @@ import {
 	Map as GoogleMap,
 	InfoWindow,
 } from "@vis.gl/react-google-maps";
+import { Heart } from "lucide-react";
 import { useState } from "react";
-import { formatMinutes, formatPriceBRL } from "#/lib/format";
+import { Button } from "#/components/ui/button";
+import { formatMinutes, formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
 const CAUCAIA_CENTER = { lat: -3.7361, lng: -38.6531 };
@@ -22,8 +24,12 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
  */
 export default function ListingsMap({
 	listings,
+	favoriteIds,
+	onToggleFavorite,
 }: {
 	listings: ListingWithPlaces[];
+	favoriteIds: Set<string>;
+	onToggleFavorite: (id: string) => void;
 }) {
 	const [openId, setOpenId] = useState<string | null>(null);
 
@@ -80,16 +86,44 @@ export default function ListingsMap({
 							position={{ lat: active.lat, lng: active.lng }}
 							onCloseClick={() => setOpenId(null)}
 						>
-							<div className="flex flex-col gap-1">
-								<a
-									href={active.url}
-									target="_blank"
-									rel="noreferrer"
-									className="font-medium hover:underline"
-								>
-									{active.title}
-								</a>
+							<div className="flex w-56 flex-col gap-1">
+								{active.photos.length > 0 && (
+									<img
+										src={active.photos[0]}
+										alt={active.title}
+										referrerPolicy="no-referrer"
+										className="mb-1 h-28 w-full rounded object-cover"
+									/>
+								)}
+								<div className="flex items-start justify-between gap-2">
+									<a
+										href={active.url}
+										target="_blank"
+										rel="noreferrer"
+										className="font-medium hover:underline"
+									>
+										{active.title}
+									</a>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="size-7 shrink-0"
+										onClick={() => onToggleFavorite(active.id)}
+									>
+										<Heart
+											className={
+												favoriteIds.has(active.id)
+													? "size-4 fill-red-500 text-red-500"
+													: "size-4"
+											}
+										/>
+									</Button>
+								</div>
 								<span>{formatPriceBRL(active.priceCents)}</span>
+								<span className="text-xs text-muted-foreground">
+									Fonte: {SOURCE_LABELS[active.source] ?? active.source}
+								</span>
 								<span className="text-xs text-muted-foreground">
 									Praia: {formatMinutes(active.places.praia?.driveMinutes)} de
 									carro
