@@ -142,6 +142,7 @@ function ListingThumbnail({ listing }: { listing: ListingWithPlaces }) {
 					src={listing.photos[0]}
 					alt={listing.title}
 					className="h-full w-full object-cover"
+					referrerPolicy="no-referrer"
 				/>
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-2xl">
@@ -154,6 +155,7 @@ function ListingThumbnail({ listing }: { listing: ListingWithPlaces }) {
 									src={photo}
 									alt={`${listing.title} — foto ${i + 1}`}
 									className="aspect-video w-full rounded-lg object-cover"
+									referrerPolicy="no-referrer"
 								/>
 							</CarouselItem>
 						))}
