@@ -1,69 +1,109 @@
-import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import {
+	AdvancedMarker,
+	APIProvider,
+	Map as GoogleMap,
+	InfoWindow,
+} from "@vis.gl/react-google-maps";
+import { useState } from "react";
 import { formatMinutes, formatPriceBRL } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
-const icon = L.icon({
-	iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-	iconRetinaUrl:
-		"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-	shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-	iconSize: [25, 41],
-	iconAnchor: [12, 41],
-	popupAnchor: [1, -34],
-	shadowSize: [41, 41],
-});
+const CAUCAIA_CENTER = { lat: -3.7361, lng: -38.6531 };
 
-const CAUCAIA_CENTER: [number, number] = [-3.7361, -38.6531];
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
+	| string
+	| undefined;
 
 /**
- * Default export so callers can `React.lazy(() => import(...))` this — leaflet
- * touches `window` at module load time, which crashes SSR if imported statically.
+ * Default export so callers can `React.lazy(() => import(...))` this — the
+ * Maps JS API loader touches `window`/`document` at load time, which crashes
+ * SSR if imported statically (same reason the prior Leaflet map was default-
+ * exported and lazy-loaded).
  */
 export default function ListingsMap({
 	listings,
 }: {
 	listings: ListingWithPlaces[];
 }) {
+	const [openId, setOpenId] = useState<string | null>(null);
+
 	const withCoords = listings.filter(
 		(l): l is ListingWithPlaces & { lat: number; lng: number } =>
 			l.lat !== null && l.lng !== null,
 	);
 
+	if (!GOOGLE_MAPS_API_KEY) {
+		return (
+			<div className="flex h-150 items-center justify-center rounded-lg border text-sm text-muted-foreground">
+				VITE_GOOGLE_MAPS_API_KEY não configurada.
+			</div>
+		);
+	}
+
+	const active = withCoords.find((l) => l.id === openId) ?? null;
+
 	return (
-		<div className="h-[600px] overflow-hidden rounded-lg border">
-			<MapContainer center={CAUCAIA_CENTER} zoom={12} className="h-full w-full">
-				<TileLayer
-					attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-					url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-				/>
-				{withCoords.map((l) => (
-					<Marker key={l.id} position={[l.lat, l.lng]} icon={icon}>
-						<Popup>
+		<div className="h-150 overflow-hidden rounded-lg border">
+			<APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+				<GoogleMap
+					// "DEMO_MAP_ID" is Google's documented placeholder for AdvancedMarker
+					// when no real Map ID has been created in Cloud Console — renders
+					// fine, just without custom vector map styling.
+					mapId="DEMO_MAP_ID"
+					defaultCenter={CAUCAIA_CENTER}
+					defaultZoom={12}
+					gestureHandling="greedy"
+					disableDefaultUI={false}
+					className="h-full w-full"
+				>
+					{withCoords.map((l) => (
+						<AdvancedMarker
+							key={l.id}
+							position={{ lat: l.lat, lng: l.lng }}
+							onClick={() => setOpenId(l.id)}
+						>
+							{/* Plain marker div instead of the library's <Pin>: Pin renders a
+							google.maps.marker.PinElement custom element that throws on any
+							unrecognized property, and TanStack Devtools' dev-mode JSX
+							instrumentation injects a data-tsd-source prop onto every element. */}
+							<div
+								className="size-4 rounded-full border-2 border-white shadow"
+								style={{
+									backgroundColor: l.type === "casa" ? "#2563eb" : "#d97706",
+								}}
+							/>
+						</AdvancedMarker>
+					))}
+
+					{active && (
+						<InfoWindow
+							position={{ lat: active.lat, lng: active.lng }}
+							onCloseClick={() => setOpenId(null)}
+						>
 							<div className="flex flex-col gap-1">
 								<a
-									href={l.url}
+									href={active.url}
 									target="_blank"
 									rel="noreferrer"
 									className="font-medium hover:underline"
 								>
-									{l.title}
+									{active.title}
 								</a>
-								<span>{formatPriceBRL(l.priceCents)}</span>
+								<span>{formatPriceBRL(active.priceCents)}</span>
 								<span className="text-xs text-muted-foreground">
-									Praia: {formatMinutes(l.places.praia?.driveMinutes)} de carro
+									Praia: {formatMinutes(active.places.praia?.driveMinutes)} de
+									carro
 								</span>
-								{!l.addressPrecise && (
+								{!active.addressPrecise && (
 									<span className="text-xs text-muted-foreground">
 										Localização aproximada (bairro)
 									</span>
 								)}
 							</div>
-						</Popup>
-					</Marker>
-				))}
-			</MapContainer>
+						</InfoWindow>
+					)}
+				</GoogleMap>
+			</APIProvider>
 		</div>
 	);
 }
