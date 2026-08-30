@@ -1,4 +1,5 @@
 import { ClientOnly } from "@tanstack/react-router";
+import { Home, LandPlot, LayoutGrid } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ListingsTable } from "#/components/listings-table";
 import { Badge } from "#/components/ui/badge";
@@ -12,8 +13,11 @@ const ListingsMap = lazy(() => import("#/components/listings-map"));
 type ViewMode = "tabela" | "mapa";
 type TypeFilter = ImovelType | "todos";
 
+const BEDROOMS_TODOS = "todos";
+
 const PRAIA_MAX_DEFAULT = 30;
 const COMODIDADE_MAX_DEFAULT = 15;
+const PRICE_CAP_CENTS = 700_000_00;
 
 export function ListingsExplorer({
 	listings,
@@ -22,17 +26,28 @@ export function ListingsExplorer({
 }) {
 	const [view, setView] = useState<ViewMode>("tabela");
 	const [type, setType] = useState<TypeFilter>("todos");
+	const [bedrooms, setBedrooms] = useState<string>(BEDROOMS_TODOS);
 	const [praiaMaxMin, setPraiaMaxMin] = useState(PRAIA_MAX_DEFAULT);
 	const [comodidadeMaxMin, setComodidadeMaxMin] = useState(
 		COMODIDADE_MAX_DEFAULT,
 	);
 
+	const bedroomsOptions = useMemo(() => {
+		const values = listings
+			.map((l) => l.bedrooms)
+			.filter((b): b is number => b !== null && b > 0);
+		return Array.from(new Set(values)).sort((a, b) => a - b);
+	}, [listings]);
+
 	const priceBounds = useMemo(() => {
 		const prices = listings
 			.map((l) => l.priceCents)
 			.filter((p): p is number => p !== null);
-		if (prices.length === 0) return { min: 0, max: 1_000_000_00 };
-		return { min: Math.min(...prices), max: Math.max(...prices) };
+		if (prices.length === 0) return { min: 0, max: PRICE_CAP_CENTS };
+		return {
+			min: Math.min(...prices),
+			max: Math.min(Math.max(...prices), PRICE_CAP_CENTS),
+		};
 	}, [listings]);
 
 	const [priceRange, setPriceRange] = useState<[number, number]>([
@@ -44,6 +59,8 @@ export function ListingsExplorer({
 		return listings.filter((l) => {
 			if (l.status !== "ativo") return false;
 			if (type !== "todos" && l.type !== type) return false;
+			if (bedrooms !== BEDROOMS_TODOS && l.bedrooms !== Number(bedrooms))
+				return false;
 			if (
 				l.priceCents !== null &&
 				(l.priceCents < priceRange[0] || l.priceCents > priceRange[1])
@@ -64,7 +81,7 @@ export function ListingsExplorer({
 
 			return true;
 		});
-	}, [listings, type, priceRange, praiaMaxMin, comodidadeMaxMin]);
+	}, [listings, type, bedrooms, priceRange, praiaMaxMin, comodidadeMaxMin]);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -78,9 +95,36 @@ export function ListingsExplorer({
 						onValueChange={(v) => v[0] && setType(v[0] as TypeFilter)}
 						variant="outline"
 					>
-						<ToggleGroupItem value="todos">Todos</ToggleGroupItem>
-						<ToggleGroupItem value="casa">Casa</ToggleGroupItem>
-						<ToggleGroupItem value="terreno">Terreno</ToggleGroupItem>
+						<ToggleGroupItem value="todos" className="gap-1.5">
+							<LayoutGrid className="size-4" />
+							Todos
+						</ToggleGroupItem>
+						<ToggleGroupItem value="casa" className="gap-1.5">
+							<Home className="size-4" />
+							Casa
+						</ToggleGroupItem>
+						<ToggleGroupItem value="terreno" className="gap-1.5">
+							<LandPlot className="size-4" />
+							Terreno
+						</ToggleGroupItem>
+					</ToggleGroup>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						Quartos
+					</span>
+					<ToggleGroup
+						value={[bedrooms]}
+						onValueChange={(v) => v[0] && setBedrooms(v[0])}
+						variant="outline"
+					>
+						<ToggleGroupItem value={BEDROOMS_TODOS}>Todos</ToggleGroupItem>
+						{bedroomsOptions.map((n) => (
+							<ToggleGroupItem key={n} value={String(n)}>
+								{n} {n === 1 ? "quarto" : "quartos"}
+							</ToggleGroupItem>
+						))}
 					</ToggleGroup>
 				</div>
 
@@ -104,8 +148,8 @@ export function ListingsExplorer({
 					<Slider
 						min={5}
 						max={60}
-						value={[praiaMaxMin]}
-						onValueChange={(v) => setPraiaMaxMin((v as number[])[0]!)}
+						value={praiaMaxMin}
+						onValueChange={(v) => setPraiaMaxMin(v as number)}
 					/>
 				</div>
 
@@ -116,8 +160,8 @@ export function ListingsExplorer({
 					<Slider
 						min={5}
 						max={30}
-						value={[comodidadeMaxMin]}
-						onValueChange={(v) => setComodidadeMaxMin((v as number[])[0]!)}
+						value={comodidadeMaxMin}
+						onValueChange={(v) => setComodidadeMaxMin(v as number)}
 					/>
 				</div>
 

@@ -36,12 +36,12 @@ Ativo ou Inativo. Um Imóvel vira Inativo (soft delete) quando some do site Font
 - Sem dedup automático entre Fontes diferentes (evita falso positivo); cada listing por Fonte é registro independente.
 - Endereço sem rua (só bairro): geocodifica pelo centro do bairro e marca `endereco_preciso: false`.
 - Sem notificação externa — log no terminal ao rodar o cron basta.
-- Fontes finais: Habitat Imobiliária (webview), Ergue Imóveis (fetch+parse), Tavares Imobiliária (fetch+parse). ZAP/Viva Real/OLX excluídos (Cloudflare). Inov9 Imóveis excluído (domínio morto/errado). imoveiscaucaia.com.br excluído (robots.txt bloqueia todo crawler exceto bots de busca nomeados). Imovelweb excluído (Cloudflare managed challenge bloqueia fetch, webview e WebFetch).
+- Fontes finais: Habitat Imobiliária (webview), Ergue Imóveis (fetch+parse), Tavares Imobiliária (fetch+parse), ZAP e Viva Real (Crawlee/Playwright — passam pelo Cloudflare managed challenge sem stealth extra, ao contrário do Bun.WebView; scrape por página de busca + página de detalhe), OLX (Crawlee/Playwright — mesmo bypass; dados completos já vêm no JSON da página de busca (RSC/Next.js), sem precisar visitar página de detalhe; filtro obrigatório por `locationDetails.municipality === "Caucaia"` pois o path `/caucaia` da URL não restringe a busca de fato). Inov9 Imóveis excluído (domínio morto/errado). imoveiscaucaia.com.br excluído (robots.txt bloqueia todo crawler exceto bots de busca nomeados). Imovelweb excluído (Cloudflare managed challenge bloqueia fetch, webview e WebFetch).
 
 - Distância = sempre tempo de deslocamento (carro + a pé), nunca linha reta.
 - Google Maps API paga, chave fornecida pelo usuário via `.env`.
 - Lista de Fontes definida por pesquisa automática, não fixa pelo usuário.
 - Scraper roda recorrente (Bun cron) com persistência em SQLite (bun:sqlite), não é execução única.
-- Sem faixa de preço/tamanho fixa no domínio — filtros ajustáveis na UI.
+- Teto fixo de R$700.000 aplicado em todas as Fontes (scraper descarta acima disso; imóveis já no banco que excedem o teto saem de "seenIds" e viram Inativo no próximo cron). Sem faixa de tamanho fixa — esse filtro fica na UI.
 - Uso é local (sem deploy).
 - UI usa shadcn com variante Base UI.

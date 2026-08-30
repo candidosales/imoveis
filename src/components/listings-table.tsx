@@ -20,7 +20,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "#/components/ui/table";
-import { formatMinutes, formatPriceBRL } from "#/lib/format";
+import {
+	formatAreaM2,
+	formatMinutes,
+	formatPriceBRL,
+	formatPricePerM2,
+} from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
 export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
@@ -41,6 +46,8 @@ export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
 						<TableHead>Imóvel</TableHead>
 						<TableHead>Tipo</TableHead>
 						<TableHead>Preço</TableHead>
+						<TableHead>Área</TableHead>
+						<TableHead>Valor/m²</TableHead>
 						<TableHead>Quartos</TableHead>
 						<TableHead>Bairro</TableHead>
 						<TableHead>Praia (carro)</TableHead>
@@ -68,9 +75,33 @@ export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
 								</a>
 							</TableCell>
 							<TableCell>
-								<Badge variant="outline">{l.type}</Badge>
+								<Badge
+									variant="outline"
+									className={
+										l.type === "casa"
+											? "border-blue-200 bg-blue-50 text-blue-700"
+											: "border-amber-200 bg-amber-50 text-amber-700"
+									}
+								>
+									{l.type}
+								</Badge>
 							</TableCell>
 							<TableCell>{formatPriceBRL(l.priceCents)}</TableCell>
+							<TableCell>
+								{formatAreaM2(
+									l.type === "terreno"
+										? (l.lotAreaM2 ?? l.builtAreaM2)
+										: (l.builtAreaM2 ?? l.lotAreaM2),
+								)}
+							</TableCell>
+							<TableCell>
+								{formatPricePerM2(
+									l.priceCents,
+									l.type === "terreno"
+										? (l.lotAreaM2 ?? l.builtAreaM2)
+										: (l.builtAreaM2 ?? l.lotAreaM2),
+								)}
+							</TableCell>
 							<TableCell>{l.bedrooms ?? "—"}</TableCell>
 							<TableCell>{l.neighborhood ?? "—"}</TableCell>
 							<TableCell>
