@@ -19,14 +19,17 @@ const LISTING_PAGES: Array<{ path: string; type: ImovelType }> = [
  */
 export const habitatScraper: SiteScraper = {
   source: "habitat",
-  async scrape(): Promise<ScrapedListing[]> {
+  async scrape(onListing): Promise<ScrapedListing[]> {
     const detailLinks = await discoverCaucaiaListingLinks();
     const listings: ScrapedListing[] = [];
 
     for (const link of detailLinks) {
       try {
         const listing = await scrapeDetailPage(link);
-        if (listing) listings.push(listing);
+        if (listing) {
+          listings.push(listing);
+          onListing(listing);
+        }
       } catch (err) {
         console.error(`[habitat] falhou ao ler ${link.url}:`, err);
       }
@@ -74,6 +77,7 @@ async function scrapeDetailPage(link: DetailLink): Promise<ScrapedListing | null
   const description = html.match(
     /Descrição do imóvel<\/div><div class="ParagraphIcon__Content-sc-ivjngs-5[^"]*">([\s\S]*?)<\/div>/,
   )?.[1]?.trim();
+  const gallery = extractPhotos(html);
   const photo = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1];
 
   return {
@@ -94,8 +98,40 @@ async function scrapeDetailPage(link: DetailLink): Promise<ScrapedListing | null
     addressPrecise: false,
     lat: null,
     lng: null,
-    photos: photo ? [photo] : [],
+    photos: gallery.length > 0 ? gallery : photo ? [photo] : [],
   };
+}
+
+/**
+ * The rendered detail page embeds a `"jsonPhotos":"[...]"` field: a JSON array,
+ * itself JSON-string-escaped, of `{ urlPhoto, flgNotShowSite }` gallery entries.
+ */
+function extractPhotos(html: string): string[] {
+  const key = '"jsonPhotos":"';
+  const start = html.indexOf(key);
+  if (start === -1) return [];
+
+  let end = start + key.length;
+  while (end < html.length) {
+    if (html[end] === "\\") {
+      end += 2;
+      continue;
+    }
+    if (html[end] === '"') break;
+    end++;
+  }
+
+  try {
+    const raw = html.slice(start + key.length, end);
+    const decoded = JSON.parse(`"${raw}"`) as string;
+    const photos = JSON.parse(decoded) as Array<{
+      urlPhoto: string;
+      flgNotShowSite: number;
+    }>;
+    return photos.filter((p) => p.flgNotShowSite === 0).map((p) => p.urlPhoto);
+  } catch {
+    return [];
+  }
 }
 
 function intAfter(html: string, label: string): number | null {

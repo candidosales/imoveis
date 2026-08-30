@@ -22,7 +22,7 @@ const TIPOS = ["casa", "terreno"] as const;
  */
 export const tavaresScraper: SiteScraper = {
 	source: "tavares",
-	async scrape(): Promise<ScrapedListing[]> {
+	async scrape(onListing): Promise<ScrapedListing[]> {
 		const listings: ScrapedListing[] = [];
 
 		for (const tipo of TIPOS) {
@@ -30,7 +30,11 @@ export const tavaresScraper: SiteScraper = {
 			for (const url of urls) {
 				try {
 					const listing = await scrapeDetailPage(url, tipo);
-					if (listing) listings.push(listing);
+					if (listing) {
+						listings.push(listing);
+						onListing(listing);
+					}
+					console.log(`[tavares] ok: ${url}`);
 				} catch (err) {
 					console.error(`[tavares] falhou ao ler ${url}:`, err);
 				}

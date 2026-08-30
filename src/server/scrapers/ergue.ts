@@ -14,14 +14,17 @@ const BASE_URL = "https://ergueimoveis.com.br";
  */
 export const ergueScraper: SiteScraper = {
   source: "ergue",
-  async scrape(): Promise<ScrapedListing[]> {
+  async scrape(onListing): Promise<ScrapedListing[]> {
     const detailUrls = await discoverCaucaiaListingUrls();
     const listings: ScrapedListing[] = [];
 
     for (const url of detailUrls) {
       try {
         const listing = await scrapeDetailPage(url);
-        if (listing) listings.push(listing);
+        if (listing) {
+          listings.push(listing);
+          onListing(listing);
+        }
       } catch (err) {
         console.error(`[ergue] falhou ao ler ${url}:`, err);
       }
@@ -50,6 +53,12 @@ async function discoverCaucaiaListingUrls(): Promise<string[]> {
   return [...urls];
 }
 
+interface VistaFoto {
+  Foto: string;
+  Ordem: string;
+  ExibirNoSite: string;
+}
+
 interface VistaProperty {
   Codigo: string;
   Categoria: string;
@@ -60,6 +69,7 @@ interface VistaProperty {
   TotalBanheiros: string;
   Vagas: string;
   FotoDestaque: string;
+  Foto?: VistaFoto[];
   ValorVenda: string;
   TipoEndereco: string;
   Endereco: string;
@@ -84,6 +94,12 @@ async function scrapeDetailPage(url: string): Promise<ScrapedListing | null> {
   const priceReais = Number(property.ValorVenda);
   const addressParts = [property.TipoEndereco, property.Endereco, property.Numero].filter(Boolean);
 
+  const gallery = (property.Foto ?? [])
+    .filter((f) => f.ExibirNoSite === "Sim")
+    .sort((a, b) => Number(a.Ordem) - Number(b.Ordem))
+    .map((f) => f.Foto);
+  const photos = gallery.length > 0 ? gallery : property.FotoDestaque ? [property.FotoDestaque] : [];
+
   return {
     source: "ergue",
     externalId: property.Codigo,
@@ -102,7 +118,7 @@ async function scrapeDetailPage(url: string): Promise<ScrapedListing | null> {
     addressPrecise: addressParts.length > 0,
     lat: null,
     lng: null,
-    photos: property.FotoDestaque ? [property.FotoDestaque] : [],
+    photos,
   };
 }
 
