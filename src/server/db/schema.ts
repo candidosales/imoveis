@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS listings (
   lat REAL,
   lng REAL,
   photos TEXT NOT NULL DEFAULT '[]',
+  favorite INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
   first_seen_at TEXT NOT NULL,
   last_seen_at TEXT NOT NULL,

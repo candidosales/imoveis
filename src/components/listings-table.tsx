@@ -1,4 +1,6 @@
+import { Heart } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
 import {
 	Carousel,
 	CarouselContent,
@@ -28,7 +30,15 @@ import {
 } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
-export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
+export function ListingsTable({
+	listings,
+	favoriteIds,
+	onToggleFavorite,
+}: {
+	listings: ListingWithPlaces[];
+	favoriteIds: Set<string>;
+	onToggleFavorite: (id: string) => void;
+}) {
 	if (listings.length === 0) {
 		return (
 			<p className="p-8 text-center text-sm text-muted-foreground">
@@ -42,6 +52,7 @@ export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
 			<Table>
 				<TableHeader>
 					<TableRow>
+						<TableHead />
 						<TableHead>Foto</TableHead>
 						<TableHead>Imóvel</TableHead>
 						<TableHead>Tipo</TableHead>
@@ -61,6 +72,23 @@ export function ListingsTable({ listings }: { listings: ListingWithPlaces[] }) {
 				<TableBody>
 					{listings.map((l) => (
 						<TableRow key={l.id}>
+							<TableCell>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="size-8"
+									onClick={() => onToggleFavorite(l.id)}
+								>
+									<Heart
+										className={
+											favoriteIds.has(l.id)
+												? "size-4 fill-red-500 text-red-500"
+												: "size-4"
+										}
+									/>
+								</Button>
+							</TableCell>
 							<TableCell>
 								<ListingThumbnail listing={l} />
 							</TableCell>

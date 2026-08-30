@@ -8,9 +8,20 @@ const DB_PATH = process.env.DATABASE_PATH ?? "./data/caucaia-imoveis.sqlite";
 mkdirSync(dirname(DB_PATH), { recursive: true });
 
 export const db = new Database(DB_PATH, { create: true });
-db.exec("PRAGMA journal_mode = WAL;");
-db.exec("PRAGMA foreign_keys = ON;");
-db.exec(SCHEMA_SQL);
+db.run("PRAGMA journal_mode = WAL;");
+db.run("PRAGMA foreign_keys = ON;");
+db.run(SCHEMA_SQL);
+
+// `CREATE TABLE IF NOT EXISTS` above doesn't alter an already-existing table,
+// so new columns need an explicit guarded migration.
+const listingColumns = db.query("PRAGMA table_info(listings)").all() as {
+	name: string;
+}[];
+if (!listingColumns.some((c) => c.name === "favorite")) {
+	db.run(
+		"ALTER TABLE listings ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;",
+	);
+}
 
 /**
  * bun-types' `Database.run()` signature only fits positional/array bindings;

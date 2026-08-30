@@ -27,6 +27,7 @@ interface ListingRow {
 	lat: number | null;
 	lng: number | null;
 	photos: string;
+	favorite: number;
 	status: string;
 	first_seen_at: string;
 	last_seen_at: string;
@@ -54,6 +55,7 @@ function rowToListing(row: ListingRow): Listing {
 		lat: row.lat,
 		lng: row.lng,
 		photos: JSON.parse(row.photos) as string[],
+		favorite: row.favorite === 1,
 		status: row.status as Listing["status"],
 		firstSeenAt: row.first_seen_at,
 		lastSeenAt: row.last_seen_at,
@@ -148,6 +150,13 @@ export function upsertListing(scraped: ScrapedListing): UpsertResult {
 	}
 
 	return { id, isNew: !existing, priceChanged };
+}
+
+export function setListingFavorite(id: string, favorite: boolean): void {
+	db.run("UPDATE listings SET favorite = ? WHERE id = ?", [
+		favorite ? 1 : 0,
+		id,
+	]);
 }
 
 /** Soft-deletes every currently-active listing from `source` not present in `seenExternalIds`. */

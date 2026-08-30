@@ -1,5 +1,5 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { Home, LandPlot, LayoutGrid, Minus, Plus } from "lucide-react";
+import { Heart, Home, LandPlot, LayoutGrid, Minus, Plus } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ListingsTable } from "#/components/listings-table";
 import { Badge } from "#/components/ui/badge";
@@ -8,6 +8,7 @@ import { Slider } from "#/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
 import { formatPriceBRL } from "#/lib/format";
 import type { ImovelType, ListingWithPlaces } from "#/server/db/types";
+import { setFavorite } from "#/server/functions/set-favorite";
 
 const PRICE_HISTOGRAM_BUCKETS = 24;
 
@@ -49,6 +50,24 @@ export function ListingsExplorer({
 	}, [listings]);
 	const [sources, setSources] = useState<string[]>(sourceOptions);
 
+	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
+		() => new Set(listings.filter((l) => l.favorite).map((l) => l.id)),
+	);
+	const [favoritesOnly, setFavoritesOnly] = useState(false);
+
+	function toggleFavorite(id: string) {
+		setFavoriteIds((prev) => {
+			const next = new Set(prev);
+			const favorite = !next.has(id);
+			if (favorite) next.add(id);
+			else next.delete(id);
+			setFavorite({ data: { id, favorite } }).catch((err) => {
+				console.error("falha ao salvar favorito", err);
+			});
+			return next;
+		});
+	}
+
 	const bedroomsOptions = useMemo(() => {
 		const values = listings
 			.map((l) => l.bedrooms)
@@ -84,6 +103,7 @@ export function ListingsExplorer({
 		if (span <= 0) return buckets;
 		for (const l of listings) {
 			if (l.priceCents === null) continue;
+			if (type !== "todos" && l.type !== type) continue;
 			const clamped = Math.min(l.priceCents, priceBounds.max);
 			const bucket = Math.min(
 				PRICE_HISTOGRAM_BUCKETS - 1,
@@ -94,7 +114,7 @@ export function ListingsExplorer({
 			if (bucket >= 0) buckets[bucket]++;
 		}
 		return buckets;
-	}, [listings, priceBounds]);
+	}, [listings, priceBounds, type]);
 	const priceHistogramScaled = priceHistogram.map((c) => Math.sqrt(c));
 	const priceHistogramMax = Math.max(1, ...priceHistogramScaled);
 
@@ -103,6 +123,7 @@ export function ListingsExplorer({
 			if (l.status !== "ativo") return false;
 			if (type !== "todos" && l.type !== type) return false;
 			if (!sources.includes(l.source)) return false;
+			if (favoritesOnly && !favoriteIds.has(l.id)) return false;
 			if (bedrooms !== BEDROOMS_TODOS && l.bedrooms !== Number(bedrooms))
 				return false;
 			if (
@@ -129,6 +150,8 @@ export function ListingsExplorer({
 		listings,
 		type,
 		sources,
+		favoritesOnly,
+		favoriteIds,
 		bedrooms,
 		priceRange,
 		praiaMaxMin,
@@ -212,6 +235,23 @@ export function ListingsExplorer({
 									</ToggleGroupItem>
 								))}
 							</ToggleGroup>
+						</div>
+
+						<div className="flex flex-col gap-2">
+							<span className="text-xs font-medium text-muted-foreground">
+								&nbsp;
+							</span>
+							<Button
+								type="button"
+								variant={favoritesOnly ? "default" : "outline"}
+								className="gap-1.5"
+								onClick={() => setFavoritesOnly((v) => !v)}
+							>
+								<Heart
+									className={favoritesOnly ? "size-4 fill-current" : "size-4"}
+								/>
+								Favoritos
+							</Button>
 						</div>
 					</div>
 
@@ -299,7 +339,11 @@ export function ListingsExplorer({
 			</div>
 
 			{view === "tabela" ? (
-				<ListingsTable listings={filtered} />
+				<ListingsTable
+					listings={filtered}
+					favoriteIds={favoriteIds}
+					onToggleFavorite={toggleFavorite}
+				/>
 			) : (
 				<ClientOnly fallback={<MapLoading />}>
 					<Suspense fallback={<MapLoading />}>

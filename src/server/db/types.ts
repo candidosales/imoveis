@@ -45,6 +45,7 @@ export interface Listing {
   lat: number | null;
   lng: number | null;
   photos: string[];
+  favorite: boolean;
   status: ImovelStatus;
   firstSeenAt: string;
   lastSeenAt: string;
