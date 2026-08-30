@@ -22,6 +22,15 @@ const PRAIA_MAX_DEFAULT = 30;
 const COMODIDADE_MAX_DEFAULT = 15;
 const PRICE_CAP_CENTS = 700_000_00;
 
+const SOURCE_LABELS: Record<string, string> = {
+	zap: "ZAP",
+	vivareal: "Viva Real",
+	olx: "OLX",
+	ergue: "Ergue",
+	habitat: "Habitat",
+	tavares: "Tavares",
+};
+
 export function ListingsExplorer({
 	listings,
 }: {
@@ -34,6 +43,11 @@ export function ListingsExplorer({
 	const [comodidadeMaxMin, setComodidadeMaxMin] = useState(
 		COMODIDADE_MAX_DEFAULT,
 	);
+
+	const sourceOptions = useMemo(() => {
+		return Array.from(new Set(listings.map((l) => l.source))).sort();
+	}, [listings]);
+	const [sources, setSources] = useState<string[]>(sourceOptions);
 
 	const bedroomsOptions = useMemo(() => {
 		const values = listings
@@ -73,7 +87,9 @@ export function ListingsExplorer({
 			const clamped = Math.min(l.priceCents, priceBounds.max);
 			const bucket = Math.min(
 				PRICE_HISTOGRAM_BUCKETS - 1,
-				Math.floor(((clamped - priceBounds.min) / span) * PRICE_HISTOGRAM_BUCKETS),
+				Math.floor(
+					((clamped - priceBounds.min) / span) * PRICE_HISTOGRAM_BUCKETS,
+				),
 			);
 			if (bucket >= 0) buckets[bucket]++;
 		}
@@ -86,6 +102,7 @@ export function ListingsExplorer({
 		return listings.filter((l) => {
 			if (l.status !== "ativo") return false;
 			if (type !== "todos" && l.type !== type) return false;
+			if (!sources.includes(l.source)) return false;
 			if (bedrooms !== BEDROOMS_TODOS && l.bedrooms !== Number(bedrooms))
 				return false;
 			if (
@@ -108,7 +125,15 @@ export function ListingsExplorer({
 
 			return true;
 		});
-	}, [listings, type, bedrooms, priceRange, praiaMaxMin, comodidadeMaxMin]);
+	}, [
+		listings,
+		type,
+		sources,
+		bedrooms,
+		priceRange,
+		praiaMaxMin,
+		comodidadeMaxMin,
+	]);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -171,6 +196,23 @@ export function ListingsExplorer({
 								</Button>
 							</div>
 						</div>
+
+						<div className="flex flex-col gap-2">
+							<span className="text-xs font-medium text-muted-foreground">
+								Fonte
+							</span>
+							<ToggleGroup
+								value={sources}
+								onValueChange={(v) => setSources(v as string[])}
+								variant="outline"
+							>
+								{sourceOptions.map((source) => (
+									<ToggleGroupItem key={source} value={source}>
+										{SOURCE_LABELS[source] ?? source}
+									</ToggleGroupItem>
+								))}
+							</ToggleGroup>
+						</div>
 					</div>
 
 					<div className="flex items-center gap-3">
@@ -210,13 +252,17 @@ export function ListingsExplorer({
 						/>
 						<div className="flex items-center justify-between gap-3 pt-1">
 							<div className="flex flex-col items-center gap-1">
-								<span className="text-[11px] text-muted-foreground">Mínimo</span>
+								<span className="text-[11px] text-muted-foreground">
+									Mínimo
+								</span>
 								<span className="rounded-full border px-3 py-1 text-sm">
 									{formatPriceBRL(priceRange[0])}
 								</span>
 							</div>
 							<div className="flex flex-col items-center gap-1">
-								<span className="text-[11px] text-muted-foreground">Máximo</span>
+								<span className="text-[11px] text-muted-foreground">
+									Máximo
+								</span>
 								<span className="rounded-full border px-3 py-1 text-sm">
 									{priceRange[1] >= priceBounds.max
 										? `${formatPriceBRL(priceRange[1])}+`
