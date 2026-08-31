@@ -72,6 +72,18 @@ Detalhes e decisões de design: [CONTEXT.md](CONTEXT.md).
 
 SQLite (`data/`, gitignored) com 3 tabelas: `listings` (imóvel, soft-delete via `status`), `price_history` (log de mudança de preço), `listing_places` (tempo de carro/a pé até praia/mercado/farmácia/hospital/padaria, por imóvel).
 
+## Compartilhar acesso (Cloudflare Tunnel)
+
+Pra deixar alguém acessar o `bun run dev` local (ex: esposa no celular/outro PC), sem deploy:
+
+```bash
+brew install cloudflare/cloudflare/cloudflared
+bun run dev                                    # deixa rodando numa aba
+cloudflared tunnel --url http://localhost:3000 # outra aba
+```
+
+Gera URL tipo `https://xxxx.trycloudflare.com` — manda pra ela. Só funciona enquanto os dois comandos ficam rodando; fechar o terminal derruba o acesso.
+
 ## UI
 
 `/` — lista todos os imóveis ativos com filtros (tipo, faixa de preço, minutos até a praia, minutos até comodidades), alternância tabela/mapa, favoritar e dispensar (`dismiss`) imóvel, e ícone da Fonte por listing.
