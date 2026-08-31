@@ -128,7 +128,11 @@ function extractPhotos(html: string): string[] {
       urlPhoto: string;
       flgNotShowSite: number;
     }>;
-    return photos.filter((p) => p.flgNotShowSite === 0).map((p) => p.urlPhoto);
+    const urls: string[] = [];
+    for (const p of photos) {
+      if (p.flgNotShowSite === 0) urls.push(p.urlPhoto);
+    }
+    return urls;
   } catch {
     return [];
   }

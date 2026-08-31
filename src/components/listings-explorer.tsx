@@ -67,9 +67,11 @@ export function ListingsExplorer({
 		parseAsArrayOf(parseAsString).withDefault(sourceOptions),
 	);
 
-	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
-		() => new Set(listings.filter((l) => l.favorite).map((l) => l.id)),
-	);
+	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => {
+		const ids = new Set<string>();
+		for (const l of listings) if (l.favorite) ids.add(l.id);
+		return ids;
+	});
 	const [favoritesOnly, setFavoritesOnly] = useQueryState(
 		"favoritos",
 		parseAsBoolean.withDefault(false),
@@ -142,11 +144,13 @@ export function ListingsExplorer({
 	const priceHistogramScaled = priceHistogram.map((c) => Math.sqrt(c));
 	const priceHistogramMax = Math.max(1, ...priceHistogramScaled);
 
+	const sourceSet = useMemo(() => new Set(sources), [sources]);
+
 	const filtered = useMemo(() => {
 		return listings.filter((l) => {
 			if (l.status !== "ativo") return false;
 			if (type !== "todos" && l.type !== type) return false;
-			if (!sources.includes(l.source)) return false;
+			if (!sourceSet.has(l.source)) return false;
 			if (favoritesOnly && !favoriteIds.has(l.id)) return false;
 			if (bedrooms !== BEDROOMS_TODOS && l.bedrooms !== Number(bedrooms))
 				return false;
@@ -173,7 +177,7 @@ export function ListingsExplorer({
 	}, [
 		listings,
 		type,
-		sources,
+		sourceSet,
 		favoritesOnly,
 		favoriteIds,
 		bedrooms,
@@ -185,181 +189,34 @@ export function ListingsExplorer({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-5 rounded-lg border p-4">
-				<div className="flex flex-wrap items-start justify-between gap-6">
-					<div className="flex flex-wrap items-start gap-6">
-						<div className="flex flex-col gap-2">
-							<span className="text-xs font-medium text-muted-foreground">
-								Tipo
-							</span>
-							<ToggleGroup
-								value={[type]}
-								onValueChange={(v) => v[0] && setType(v[0] as TypeFilter)}
-								variant="outline"
-							>
-								<ToggleGroupItem value="todos" className="gap-1.5">
-									<LayoutGrid className="size-4" />
-									Todos
-								</ToggleGroupItem>
-								<ToggleGroupItem value="casa" className="gap-1.5">
-									<Home className="size-4" />
-									Casa
-								</ToggleGroupItem>
-								<ToggleGroupItem value="terreno" className="gap-1.5">
-									<LandPlot className="size-4" />
-									Terreno
-								</ToggleGroupItem>
-							</ToggleGroup>
-						</div>
+				<ListingsFilterBar
+					type={type}
+					setType={setType}
+					bedrooms={bedrooms}
+					bedroomsSteps={bedroomsSteps}
+					bedroomsIndex={bedroomsIndex}
+					setBedrooms={setBedrooms}
+					sourceOptions={sourceOptions}
+					sources={sources}
+					setSources={setSources}
+					favoritesOnly={favoritesOnly}
+					setFavoritesOnly={setFavoritesOnly}
+					filteredCount={filtered.length}
+					view={view}
+					setView={setView}
+				/>
 
-						<div className="flex flex-col gap-2">
-							<span className="text-xs font-medium text-muted-foreground">
-								Quartos
-							</span>
-							<div className="flex items-center gap-3">
-								<Button
-									type="button"
-									variant="outline"
-									size="icon"
-									className="size-8 rounded-full"
-									disabled={bedroomsIndex === 0}
-									onClick={() => setBedrooms(bedroomsSteps[bedroomsIndex - 1]!)}
-								>
-									<Minus className="size-4" />
-								</Button>
-								<span className="min-w-20 text-center text-sm">
-									{bedrooms === BEDROOMS_TODOS
-										? "Todos"
-										: `${bedrooms} ${bedrooms === "1" ? "quarto" : "quartos"}`}
-								</span>
-								<Button
-									type="button"
-									variant="outline"
-									size="icon"
-									className="size-8 rounded-full"
-									disabled={bedroomsIndex === bedroomsSteps.length - 1}
-									onClick={() => setBedrooms(bedroomsSteps[bedroomsIndex + 1]!)}
-								>
-									<Plus className="size-4" />
-								</Button>
-							</div>
-						</div>
-
-						<div className="flex flex-col gap-2">
-							<span className="text-xs font-medium text-muted-foreground">
-								Fonte
-							</span>
-							<ToggleGroup
-								value={sources}
-								onValueChange={(v) => setSources(v as string[])}
-								variant="outline"
-							>
-								{sourceOptions.map((source) => (
-									<ToggleGroupItem key={source} value={source}>
-										{SOURCE_LABELS[source] ?? source}
-									</ToggleGroupItem>
-								))}
-							</ToggleGroup>
-						</div>
-
-						<div className="flex flex-col gap-2">
-							<span className="text-xs font-medium text-muted-foreground">
-								&nbsp;
-							</span>
-							<Button
-								type="button"
-								variant={favoritesOnly ? "default" : "outline"}
-								className="gap-1.5"
-								onClick={() => setFavoritesOnly((v) => !v)}
-							>
-								<Heart
-									className={favoritesOnly ? "size-4 fill-current" : "size-4"}
-								/>
-								Favoritos
-							</Button>
-						</div>
-					</div>
-
-					<div className="flex items-center gap-3">
-						<Badge variant="secondary">{filtered.length} imóveis</Badge>
-						<ToggleGroup
-							value={[view]}
-							onValueChange={(v) => v[0] && setView(v[0] as ViewMode)}
-							variant="outline"
-						>
-							<ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
-							<ToggleGroupItem value="mapa">Mapa</ToggleGroupItem>
-						</ToggleGroup>
-					</div>
-				</div>
-
-				<div className="grid grid-cols-1 gap-6 border-t pt-5 sm:grid-cols-3">
-					<div className="flex flex-col gap-2 sm:col-span-1">
-						<span className="text-xs font-medium text-muted-foreground">
-							Preço
-						</span>
-						<div className="flex h-12 items-end gap-px">
-							{priceHistogramScaled.map((count, i) => (
-								<div
-									key={i}
-									className="flex-1 rounded-sm bg-primary/60"
-									style={{
-										height: `${Math.max(6, (count / priceHistogramMax) * 100)}%`,
-									}}
-								/>
-							))}
-						</div>
-						<Slider
-							min={priceBounds.min}
-							max={priceBounds.max}
-							value={priceRange}
-							onValueChange={(v) => setPriceRange(v as [number, number])}
-						/>
-						<div className="flex items-center justify-between gap-3 pt-1">
-							<div className="flex flex-col items-center gap-1">
-								<span className="text-[11px] text-muted-foreground">
-									Mínimo
-								</span>
-								<span className="rounded-full border px-3 py-1 text-sm">
-									{formatPriceBRL(priceRange[0])}
-								</span>
-							</div>
-							<div className="flex flex-col items-center gap-1">
-								<span className="text-[11px] text-muted-foreground">
-									Máximo
-								</span>
-								<span className="rounded-full border px-3 py-1 text-sm">
-									{priceRange[1] >= priceBounds.max
-										? `${formatPriceBRL(priceRange[1])}+`
-										: formatPriceBRL(priceRange[1])}
-								</span>
-							</div>
-						</div>
-					</div>
-
-					<div className="flex flex-col justify-center gap-2 sm:col-span-1">
-						<span className="text-xs font-medium text-muted-foreground">
-							Até {praiaMaxMin} min da praia
-						</span>
-						<Slider
-							min={5}
-							max={60}
-							value={praiaMaxMin}
-							onValueChange={(v) => setPraiaMaxMin(v as number)}
-						/>
-					</div>
-
-					<div className="flex flex-col justify-center gap-2 sm:col-span-1">
-						<span className="text-xs font-medium text-muted-foreground">
-							Até {comodidadeMaxMin} min de mercado/farmácia/hospital/padaria
-						</span>
-						<Slider
-							min={5}
-							max={30}
-							value={comodidadeMaxMin}
-							onValueChange={(v) => setComodidadeMaxMin(v as number)}
-						/>
-					</div>
-				</div>
+				<ListingsRangeFilters
+					priceHistogramScaled={priceHistogramScaled}
+					priceHistogramMax={priceHistogramMax}
+					priceBounds={priceBounds}
+					priceRange={priceRange}
+					setPriceRange={setPriceRange}
+					praiaMaxMin={praiaMaxMin}
+					setPraiaMaxMin={setPraiaMaxMin}
+					comodidadeMaxMin={comodidadeMaxMin}
+					setComodidadeMaxMin={setComodidadeMaxMin}
+				/>
 			</div>
 
 			{view === "tabela" ? (
@@ -387,6 +244,232 @@ function MapLoading() {
 	return (
 		<div className="flex h-150 items-center justify-center rounded-lg border text-sm text-muted-foreground">
 			Carregando mapa…
+		</div>
+	);
+}
+
+function ListingsFilterBar({
+	type,
+	setType,
+	bedrooms,
+	bedroomsSteps,
+	bedroomsIndex,
+	setBedrooms,
+	sourceOptions,
+	sources,
+	setSources,
+	favoritesOnly,
+	setFavoritesOnly,
+	filteredCount,
+	view,
+	setView,
+}: {
+	type: TypeFilter;
+	setType: (type: TypeFilter) => void;
+	bedrooms: string;
+	bedroomsSteps: string[];
+	bedroomsIndex: number;
+	setBedrooms: (bedrooms: string) => void;
+	sourceOptions: string[];
+	sources: string[];
+	setSources: (sources: string[]) => void;
+	favoritesOnly: boolean;
+	setFavoritesOnly: (updater: (v: boolean) => boolean) => void;
+	filteredCount: number;
+	view: ViewMode;
+	setView: (view: ViewMode) => void;
+}) {
+	return (
+		<div className="flex flex-wrap items-start justify-between gap-6">
+			<div className="flex flex-wrap items-start gap-6">
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						Tipo
+					</span>
+					<ToggleGroup
+						value={[type]}
+						onValueChange={(v) => v[0] && setType(v[0] as TypeFilter)}
+						variant="outline"
+					>
+						<ToggleGroupItem value="todos" className="gap-1.5">
+							<LayoutGrid className="size-4" />
+							Todos
+						</ToggleGroupItem>
+						<ToggleGroupItem value="casa" className="gap-1.5">
+							<Home className="size-4" />
+							Casa
+						</ToggleGroupItem>
+						<ToggleGroupItem value="terreno" className="gap-1.5">
+							<LandPlot className="size-4" />
+							Terreno
+						</ToggleGroupItem>
+					</ToggleGroup>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						Quartos
+					</span>
+					<div className="flex items-center gap-3">
+						<Button
+							type="button"
+							variant="outline"
+							size="icon"
+							className="size-8 rounded-full"
+							disabled={bedroomsIndex === 0}
+							onClick={() => setBedrooms(bedroomsSteps[bedroomsIndex - 1]!)}
+						>
+							<Minus className="size-4" />
+						</Button>
+						<span className="min-w-20 text-center text-sm">
+							{bedrooms === BEDROOMS_TODOS
+								? "Todos"
+								: `${bedrooms} ${bedrooms === "1" ? "quarto" : "quartos"}`}
+						</span>
+						<Button
+							type="button"
+							variant="outline"
+							size="icon"
+							className="size-8 rounded-full"
+							disabled={bedroomsIndex === bedroomsSteps.length - 1}
+							onClick={() => setBedrooms(bedroomsSteps[bedroomsIndex + 1]!)}
+						>
+							<Plus className="size-4" />
+						</Button>
+					</div>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						Fonte
+					</span>
+					<ToggleGroup
+						value={sources}
+						onValueChange={(v) => setSources(v as string[])}
+						variant="outline"
+					>
+						{sourceOptions.map((source) => (
+							<ToggleGroupItem key={source} value={source}>
+								{SOURCE_LABELS[source] ?? source}
+							</ToggleGroupItem>
+						))}
+					</ToggleGroup>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						&nbsp;
+					</span>
+					<Button
+						type="button"
+						variant={favoritesOnly ? "default" : "outline"}
+						className="gap-1.5"
+						onClick={() => setFavoritesOnly((v) => !v)}
+					>
+						<Heart className={favoritesOnly ? "size-4 fill-current" : "size-4"} />
+						Favoritos
+					</Button>
+				</div>
+			</div>
+
+			<div className="flex items-center gap-3">
+				<Badge variant="secondary">{filteredCount} imóveis</Badge>
+				<ToggleGroup
+					value={[view]}
+					onValueChange={(v) => v[0] && setView(v[0] as ViewMode)}
+					variant="outline"
+				>
+					<ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
+					<ToggleGroupItem value="mapa">Mapa</ToggleGroupItem>
+				</ToggleGroup>
+			</div>
+		</div>
+	);
+}
+
+function ListingsRangeFilters({
+	priceHistogramScaled,
+	priceHistogramMax,
+	priceBounds,
+	priceRange,
+	setPriceRange,
+	praiaMaxMin,
+	setPraiaMaxMin,
+	comodidadeMaxMin,
+	setComodidadeMaxMin,
+}: {
+	priceHistogramScaled: number[];
+	priceHistogramMax: number;
+	priceBounds: { min: number; max: number };
+	priceRange: number[];
+	setPriceRange: (range: [number, number]) => void;
+	praiaMaxMin: number;
+	setPraiaMaxMin: (v: number) => void;
+	comodidadeMaxMin: number;
+	setComodidadeMaxMin: (v: number) => void;
+}) {
+	return (
+		<div className="grid grid-cols-1 gap-6 border-t pt-5 sm:grid-cols-3">
+			<div className="flex flex-col gap-2 sm:col-span-1">
+				<span className="text-xs font-medium text-muted-foreground">Preço</span>
+				<div className="flex h-12 items-end gap-px">
+					{priceHistogramScaled.map((count, i) => (
+						<div
+							key={i}
+							className="flex-1 rounded-sm bg-primary/60"
+							style={{
+								height: `${Math.max(6, (count / priceHistogramMax) * 100)}%`,
+							}}
+						/>
+					))}
+				</div>
+				<Slider
+					min={priceBounds.min}
+					max={priceBounds.max}
+					value={priceRange}
+					onValueChange={(v) => setPriceRange(v as [number, number])}
+				/>
+				<div className="flex items-center justify-between gap-3 pt-1">
+					<div className="flex flex-col items-center gap-1">
+						<span className="text-[11px] text-muted-foreground">Mínimo</span>
+						<span className="rounded-full border px-3 py-1 text-sm">
+							{formatPriceBRL(priceRange[0])}
+						</span>
+					</div>
+					<div className="flex flex-col items-center gap-1">
+						<span className="text-[11px] text-muted-foreground">Máximo</span>
+						<span className="rounded-full border px-3 py-1 text-sm">
+							{priceRange[1] >= priceBounds.max
+								? `${formatPriceBRL(priceRange[1])}+`
+								: formatPriceBRL(priceRange[1])}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="flex flex-col justify-center gap-2 sm:col-span-1">
+				<span className="text-xs font-medium text-muted-foreground">
+					Até {praiaMaxMin} min da praia
+				</span>
+				<Slider
+					min={5}
+					max={60}
+					value={praiaMaxMin}
+					onValueChange={(v) => setPraiaMaxMin(v as number)}
+				/>
+			</div>
+
+			<div className="flex flex-col justify-center gap-2 sm:col-span-1">
+				<span className="text-xs font-medium text-muted-foreground">
+					Até {comodidadeMaxMin} min de mercado/farmácia/hospital/padaria
+				</span>
+				<Slider
+					min={5}
+					max={30}
+					value={comodidadeMaxMin}
+					onValueChange={(v) => setComodidadeMaxMin(v as number)}
+				/>
+			</div>
 		</div>
 	);
 }
