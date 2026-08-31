@@ -1,5 +1,13 @@
 import { ClientOnly } from "@tanstack/react-router";
 import { Heart, Home, LandPlot, LayoutGrid, Minus, Plus } from "lucide-react";
+import {
+	parseAsArrayOf,
+	parseAsBoolean,
+	parseAsInteger,
+	parseAsString,
+	parseAsStringLiteral,
+	useQueryState,
+} from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ListingsTable } from "#/components/listings-table";
 import { Badge } from "#/components/ui/badge";
@@ -28,23 +36,44 @@ export function ListingsExplorer({
 }: {
 	listings: ListingWithPlaces[];
 }) {
-	const [view, setView] = useState<ViewMode>("tabela");
-	const [type, setType] = useState<TypeFilter>("todos");
-	const [bedrooms, setBedrooms] = useState<string>(BEDROOMS_TODOS);
-	const [praiaMaxMin, setPraiaMaxMin] = useState(PRAIA_MAX_DEFAULT);
-	const [comodidadeMaxMin, setComodidadeMaxMin] = useState(
-		COMODIDADE_MAX_DEFAULT,
+	const [view, setView] = useQueryState(
+		"view",
+		parseAsStringLiteral(["tabela", "mapa"] as const).withDefault("tabela"),
+	);
+	const [type, setType] = useQueryState(
+		"tipo",
+		parseAsStringLiteral(["todos", "casa", "terreno"] as const).withDefault(
+			"todos",
+		),
+	);
+	const [bedrooms, setBedrooms] = useQueryState(
+		"quartos",
+		parseAsString.withDefault(BEDROOMS_TODOS),
+	);
+	const [praiaMaxMin, setPraiaMaxMin] = useQueryState(
+		"praia",
+		parseAsInteger.withDefault(PRAIA_MAX_DEFAULT),
+	);
+	const [comodidadeMaxMin, setComodidadeMaxMin] = useQueryState(
+		"comodidade",
+		parseAsInteger.withDefault(COMODIDADE_MAX_DEFAULT),
 	);
 
 	const sourceOptions = useMemo(() => {
 		return Array.from(new Set(listings.map((l) => l.source))).sort();
 	}, [listings]);
-	const [sources, setSources] = useState<string[]>(sourceOptions);
+	const [sources, setSources] = useQueryState(
+		"fontes",
+		parseAsArrayOf(parseAsString).withDefault(sourceOptions),
+	);
 
 	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
 		() => new Set(listings.filter((l) => l.favorite).map((l) => l.id)),
 	);
-	const [favoritesOnly, setFavoritesOnly] = useState(false);
+	const [favoritesOnly, setFavoritesOnly] = useQueryState(
+		"favoritos",
+		parseAsBoolean.withDefault(false),
+	);
 
 	function toggleFavorite(id: string) {
 		setFavoriteIds((prev) => {
@@ -83,10 +112,14 @@ export function ListingsExplorer({
 		};
 	}, [listings]);
 
-	const [priceRange, setPriceRange] = useState<[number, number]>([
-		priceBounds.min,
-		priceBounds.max,
-	]);
+	const defaultPriceRange = useMemo<[number, number]>(
+		() => [priceBounds.min, priceBounds.max],
+		[priceBounds],
+	);
+	const [priceRange, setPriceRange] = useQueryState(
+		"preco",
+		parseAsArrayOf(parseAsInteger).withDefault(defaultPriceRange),
+	);
 
 	const priceHistogram = useMemo(() => {
 		const span = priceBounds.max - priceBounds.min;
