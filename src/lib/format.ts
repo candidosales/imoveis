@@ -7,6 +7,15 @@ export const SOURCE_LABELS: Record<string, string> = {
 	tavares: "Tavares",
 };
 
+export const SOURCE_ICONS: Record<string, string> = {
+	zap: "/icons/sources/zap.png",
+	vivareal: "/icons/sources/vivareal.png",
+	olx: "/icons/sources/olx.png",
+	ergue: "/icons/sources/ergue.webp",
+	habitat: "/icons/sources/habitat.webp",
+	tavares: "/icons/sources/tavares.png",
+};
+
 export function formatPriceBRL(cents: number | null): string {
 	if (cents === null) return "Sob consulta";
 	return (cents / 100).toLocaleString("pt-BR", {

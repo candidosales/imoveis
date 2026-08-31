@@ -79,7 +79,12 @@ export default function ListingsMap({
 							<div
 								className="size-4 rounded-full border-2 border-white shadow"
 								style={{
-									backgroundColor: l.type === "casa" ? "#2563eb" : "#d97706",
+									backgroundColor: dismissedIds.has(l.id)
+										? "#9ca3af"
+										: l.type === "casa"
+											? "#2563eb"
+											: "#d97706",
+									opacity: dismissedIds.has(l.id) ? 0.5 : 1,
 								}}
 							/>
 						</AdvancedMarker>
@@ -133,7 +138,7 @@ export default function ListingsMap({
 										<EyeOff
 											className={
 												dismissedIds.has(active.id)
-													? "size-4 text-foreground"
+													? "size-4 text-destructive"
 													: "size-4 text-muted-foreground"
 											}
 										/>

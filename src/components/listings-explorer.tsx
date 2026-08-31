@@ -5,8 +5,10 @@ import {
 	Home,
 	LandPlot,
 	LayoutGrid,
+	Map,
 	Minus,
 	Plus,
+	Table2,
 } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ListingsTable } from "#/components/listings-table";
@@ -14,7 +16,7 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Slider } from "#/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
-import { formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
+import { formatPriceBRL, SOURCE_ICONS, SOURCE_LABELS } from "#/lib/format";
 import { BEDROOMS_TODOS, type ListingsSearch } from "#/lib/listings-search";
 import type { ImovelType, ListingWithPlaces } from "#/server/db/types";
 import { setDismissed } from "#/server/functions/set-dismissed";
@@ -374,42 +376,20 @@ function ListingsFilterBar({
 						variant="outline"
 					>
 						{sourceOptions.map((source) => (
-							<ToggleGroupItem key={source} value={source}>
+							<ToggleGroupItem key={source} value={source} className="gap-1.5">
+								{SOURCE_ICONS[source] && (
+									<img
+										src={SOURCE_ICONS[source]}
+										alt=""
+										className="size-4 rounded-sm object-contain"
+									/>
+								)}
 								{SOURCE_LABELS[source] ?? source}
 							</ToggleGroupItem>
 						))}
 					</ToggleGroup>
 				</div>
 
-				<div className="flex flex-col gap-2">
-					<span className="text-xs font-medium text-muted-foreground">
-						&nbsp;
-					</span>
-					<Button
-						type="button"
-						variant={favoritesOnly ? "default" : "outline"}
-						className="gap-1.5"
-						onClick={() => setFavoritesOnly(!favoritesOnly)}
-					>
-						<Heart className={favoritesOnly ? "size-4 fill-current" : "size-4"} />
-						Favoritos
-					</Button>
-				</div>
-
-				<div className="flex flex-col gap-2">
-					<span className="text-xs font-medium text-muted-foreground">
-						&nbsp;
-					</span>
-					<Button
-						type="button"
-						variant={showDismissed ? "default" : "outline"}
-						className="gap-1.5"
-						onClick={() => setShowDismissed(!showDismissed)}
-					>
-						<EyeOff className="size-4" />
-						Descartados
-					</Button>
-				</div>
 			</div>
 
 			<div className="flex items-center gap-3">
@@ -419,9 +399,33 @@ function ListingsFilterBar({
 					onValueChange={(v) => v[0] && setView(v[0] as ViewMode)}
 					variant="outline"
 				>
-					<ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
-					<ToggleGroupItem value="mapa">Mapa</ToggleGroupItem>
+					<ToggleGroupItem value="tabela">
+						<Table2 />
+						Tabela
+					</ToggleGroupItem>
+					<ToggleGroupItem value="mapa">
+						<Map />
+						Mapa
+					</ToggleGroupItem>
 				</ToggleGroup>
+				<Button
+					type="button"
+					variant={favoritesOnly ? "default" : "outline"}
+					className="gap-1.5"
+					onClick={() => setFavoritesOnly(!favoritesOnly)}
+				>
+					<Heart className={favoritesOnly ? "size-4 fill-current" : "size-4"} />
+					Favoritos
+				</Button>
+				<Button
+					type="button"
+					variant={showDismissed ? "default" : "outline"}
+					className="gap-1.5"
+					onClick={() => setShowDismissed(!showDismissed)}
+				>
+					<EyeOff className="size-4" />
+					Descartados
+				</Button>
 			</div>
 		</div>
 	);

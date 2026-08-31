@@ -28,6 +28,8 @@ import {
 	formatMinutes,
 	formatPriceBRL,
 	formatPricePerM2,
+	SOURCE_ICONS,
+	SOURCE_LABELS,
 } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
@@ -171,7 +173,7 @@ export function createListingColumns({
 					<EyeOff
 						className={
 							dismissedIds.has(row.original.id)
-								? "size-4 text-foreground"
+								? "size-4 text-destructive"
 								: "size-4 text-muted-foreground"
 						}
 					/>
@@ -323,11 +325,22 @@ export function createListingColumns({
 				<SortableHeader label="Fonte" column={column} />
 			),
 			meta: { label: "Fonte" },
-			cell: ({ getValue }) => (
-				<span className="text-xs text-muted-foreground">
-					{getValue<string>()}
-				</span>
-			),
+			cell: ({ getValue }) => {
+				const source = getValue<string>();
+				const icon = SOURCE_ICONS[source];
+				return (
+					<span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+						{icon && (
+							<img
+								src={icon}
+								alt=""
+								className="size-4 rounded-sm object-contain"
+							/>
+						)}
+						{SOURCE_LABELS[source] ?? source}
+					</span>
+				);
+			},
 		},
 	];
 }

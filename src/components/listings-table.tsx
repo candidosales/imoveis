@@ -161,7 +161,14 @@ export function ListingsTable({
 							</TableRow>
 						) : (
 							table.getRowModel().rows.map((row) => (
-								<TableRow key={row.id}>
+								<TableRow
+									key={row.id}
+									className={
+										dismissedIds.has(row.id)
+											? "bg-muted/40 opacity-60"
+											: undefined
+									}
+								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell
 											key={cell.id}
