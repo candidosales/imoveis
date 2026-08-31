@@ -46,6 +46,7 @@ export interface Listing {
   lng: number | null;
   photos: string[];
   favorite: boolean;
+  dismissed: boolean;
   status: ImovelStatus;
   firstSeenAt: string;
   lastSeenAt: string;

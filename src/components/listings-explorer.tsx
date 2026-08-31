@@ -1,5 +1,13 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { Heart, Home, LandPlot, LayoutGrid, Minus, Plus } from "lucide-react";
+import {
+	EyeOff,
+	Heart,
+	Home,
+	LandPlot,
+	LayoutGrid,
+	Minus,
+	Plus,
+} from "lucide-react";
 import {
 	parseAsArrayOf,
 	parseAsBoolean,
@@ -16,6 +24,7 @@ import { Slider } from "#/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
 import { formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
 import type { ImovelType, ListingWithPlaces } from "#/server/db/types";
+import { setDismissed } from "#/server/functions/set-dismissed";
 import { setFavorite } from "#/server/functions/set-favorite";
 
 const PRICE_HISTOGRAM_BUCKETS = 24;
@@ -90,6 +99,29 @@ export function ListingsExplorer({
 		});
 	}
 
+	const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+		const ids = new Set<string>();
+		for (const l of listings) if (l.dismissed) ids.add(l.id);
+		return ids;
+	});
+	const [showDismissed, setShowDismissed] = useQueryState(
+		"descartados",
+		parseAsBoolean.withDefault(false),
+	);
+
+	function toggleDismiss(id: string) {
+		setDismissedIds((prev) => {
+			const next = new Set(prev);
+			const dismissed = !next.has(id);
+			if (dismissed) next.add(id);
+			else next.delete(id);
+			setDismissed({ data: { id, dismissed } }).catch((err) => {
+				console.error("falha ao descartar imóvel", err);
+			});
+			return next;
+		});
+	}
+
 	const bedroomsOptions = useMemo(() => {
 		const values = listings
 			.map((l) => l.bedrooms)
@@ -149,6 +181,7 @@ export function ListingsExplorer({
 	const filtered = useMemo(() => {
 		return listings.filter((l) => {
 			if (l.status !== "ativo") return false;
+			if (!showDismissed && dismissedIds.has(l.id)) return false;
 			if (type !== "todos" && l.type !== type) return false;
 			if (!sourceSet.has(l.source)) return false;
 			if (favoritesOnly && !favoriteIds.has(l.id)) return false;
@@ -180,6 +213,8 @@ export function ListingsExplorer({
 		sourceSet,
 		favoritesOnly,
 		favoriteIds,
+		showDismissed,
+		dismissedIds,
 		bedrooms,
 		priceRange,
 		praiaMaxMin,
@@ -201,6 +236,8 @@ export function ListingsExplorer({
 					setSources={setSources}
 					favoritesOnly={favoritesOnly}
 					setFavoritesOnly={setFavoritesOnly}
+					showDismissed={showDismissed}
+					setShowDismissed={setShowDismissed}
 					filteredCount={filtered.length}
 					view={view}
 					setView={setView}
@@ -224,6 +261,8 @@ export function ListingsExplorer({
 					listings={filtered}
 					favoriteIds={favoriteIds}
 					onToggleFavorite={toggleFavorite}
+					dismissedIds={dismissedIds}
+					onToggleDismiss={toggleDismiss}
 				/>
 			) : (
 				<ClientOnly fallback={<MapLoading />}>
@@ -232,6 +271,8 @@ export function ListingsExplorer({
 							listings={filtered}
 							favoriteIds={favoriteIds}
 							onToggleFavorite={toggleFavorite}
+							dismissedIds={dismissedIds}
+							onToggleDismiss={toggleDismiss}
 						/>
 					</Suspense>
 				</ClientOnly>
@@ -260,6 +301,8 @@ function ListingsFilterBar({
 	setSources,
 	favoritesOnly,
 	setFavoritesOnly,
+	showDismissed,
+	setShowDismissed,
 	filteredCount,
 	view,
 	setView,
@@ -275,6 +318,8 @@ function ListingsFilterBar({
 	setSources: (sources: string[]) => void;
 	favoritesOnly: boolean;
 	setFavoritesOnly: (updater: (v: boolean) => boolean) => void;
+	showDismissed: boolean;
+	setShowDismissed: (updater: (v: boolean) => boolean) => void;
 	filteredCount: number;
 	view: ViewMode;
 	setView: (view: ViewMode) => void;
@@ -368,6 +413,21 @@ function ListingsFilterBar({
 					>
 						<Heart className={favoritesOnly ? "size-4 fill-current" : "size-4"} />
 						Favoritos
+					</Button>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<span className="text-xs font-medium text-muted-foreground">
+						&nbsp;
+					</span>
+					<Button
+						type="button"
+						variant={showDismissed ? "default" : "outline"}
+						className="gap-1.5"
+						onClick={() => setShowDismissed((v) => !v)}
+					>
+						<EyeOff className="size-4" />
+						Descartados
 					</Button>
 				</div>
 			</div>

@@ -28,6 +28,7 @@ interface ListingRow {
 	lng: number | null;
 	photos: string;
 	favorite: number;
+	dismissed: number;
 	status: string;
 	first_seen_at: string;
 	last_seen_at: string;
@@ -56,6 +57,7 @@ function rowToListing(row: ListingRow): Listing {
 		lng: row.lng,
 		photos: JSON.parse(row.photos) as string[],
 		favorite: row.favorite === 1,
+		dismissed: row.dismissed === 1,
 		status: row.status as Listing["status"],
 		firstSeenAt: row.first_seen_at,
 		lastSeenAt: row.last_seen_at,
@@ -155,6 +157,13 @@ export function upsertListing(scraped: ScrapedListing): UpsertResult {
 export function setListingFavorite(id: string, favorite: boolean): void {
 	db.run("UPDATE listings SET favorite = ? WHERE id = ?", [
 		favorite ? 1 : 0,
+		id,
+	]);
+}
+
+export function setListingDismissed(id: string, dismissed: boolean): void {
+	db.run("UPDATE listings SET dismissed = ? WHERE id = ?", [
+		dismissed ? 1 : 0,
 		id,
 	]);
 }

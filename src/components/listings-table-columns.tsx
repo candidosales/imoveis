@@ -7,7 +7,7 @@ import {
 	rowSortingFeature,
 	tableFeatures,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Heart } from "lucide-react";
+import { ArrowUpDown, EyeOff, Heart } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -123,9 +123,13 @@ function ListingThumbnail({ listing }: { listing: ListingWithPlaces }) {
 export function createListingColumns({
 	favoriteIds,
 	onToggleFavorite,
+	dismissedIds,
+	onToggleDismiss,
 }: {
 	favoriteIds: Set<string>;
 	onToggleFavorite: (id: string) => void;
+	dismissedIds: Set<string>;
+	onToggleDismiss: (id: string) => void;
 }): ColumnDef<ListingsTableFeatures, ListingWithPlaces>[] {
 	return [
 		{
@@ -146,6 +150,29 @@ export function createListingColumns({
 							favoriteIds.has(row.original.id)
 								? "size-4 fill-red-500 text-red-500"
 								: "size-4"
+						}
+					/>
+				</Button>
+			),
+		},
+		{
+			id: "dismiss",
+			header: "",
+			enableSorting: false,
+			enableHiding: false,
+			cell: ({ row }) => (
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					className="size-8"
+					onClick={() => onToggleDismiss(row.original.id)}
+				>
+					<EyeOff
+						className={
+							dismissedIds.has(row.original.id)
+								? "size-4 text-foreground"
+								: "size-4 text-muted-foreground"
 						}
 					/>
 				</Button>

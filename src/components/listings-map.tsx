@@ -4,7 +4,7 @@ import {
 	Map as GoogleMap,
 	InfoWindow,
 } from "@vis.gl/react-google-maps";
-import { Heart } from "lucide-react";
+import { EyeOff, Heart } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { formatMinutes, formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
@@ -26,10 +26,14 @@ export default function ListingsMap({
 	listings,
 	favoriteIds,
 	onToggleFavorite,
+	dismissedIds,
+	onToggleDismiss,
 }: {
 	listings: ListingWithPlaces[];
 	favoriteIds: Set<string>;
 	onToggleFavorite: (id: string) => void;
+	dismissedIds: Set<string>;
+	onToggleDismiss: (id: string) => void;
 }) {
 	const [openId, setOpenId] = useState<string | null>(null);
 
@@ -116,6 +120,21 @@ export default function ListingsMap({
 												favoriteIds.has(active.id)
 													? "size-4 fill-red-500 text-red-500"
 													: "size-4"
+											}
+										/>
+									</Button>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="size-7 shrink-0"
+										onClick={() => onToggleDismiss(active.id)}
+									>
+										<EyeOff
+											className={
+												dismissedIds.has(active.id)
+													? "size-4 text-foreground"
+													: "size-4 text-muted-foreground"
 											}
 										/>
 									</Button>

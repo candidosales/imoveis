@@ -22,6 +22,11 @@ if (!listingColumns.some((c) => c.name === "favorite")) {
 		"ALTER TABLE listings ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;",
 	);
 }
+if (!listingColumns.some((c) => c.name === "dismissed")) {
+	db.run(
+		"ALTER TABLE listings ADD COLUMN dismissed INTEGER NOT NULL DEFAULT 0;",
+	);
+}
 
 /**
  * bun-types' `Database.run()` signature only fits positional/array bindings;

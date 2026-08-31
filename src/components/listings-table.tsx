@@ -6,6 +6,10 @@ import {
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import {
+	createListingColumns,
+	listingsTableFeatures as features,
+} from "#/components/listings-table-columns";
 import { Button } from "#/components/ui/button";
 import {
 	DropdownMenu,
@@ -21,28 +25,34 @@ import {
 	TableHeader,
 	TableRow,
 } from "#/components/ui/table";
-import {
-	createListingColumns,
-	listingsTableFeatures as features,
-} from "#/components/listings-table-columns";
 import type { ListingWithPlaces } from "#/server/db/types";
 
 export function ListingsTable({
 	listings,
 	favoriteIds,
 	onToggleFavorite,
+	dismissedIds,
+	onToggleDismiss,
 }: {
 	listings: ListingWithPlaces[];
 	favoriteIds: Set<string>;
 	onToggleFavorite: (id: string) => void;
+	dismissedIds: Set<string>;
+	onToggleDismiss: (id: string) => void;
 }) {
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnVisibility, setColumnVisibility] =
 		useState<ColumnVisibilityState>({});
 
 	const columns = useMemo(
-		() => createListingColumns({ favoriteIds, onToggleFavorite }),
-		[favoriteIds, onToggleFavorite],
+		() =>
+			createListingColumns({
+				favoriteIds,
+				onToggleFavorite,
+				dismissedIds,
+				onToggleDismiss,
+			}),
+		[favoriteIds, onToggleFavorite, dismissedIds, onToggleDismiss],
 	);
 
 	const table = useTable({
@@ -74,24 +84,21 @@ export function ListingsTable({
 						}
 					/>
 					<DropdownMenuContent align="end">
-						{table.getAllLeafColumns().reduce<ReactNode[]>(
-							(items, column) => {
-								if (!column.getCanHide()) return items;
-								items.push(
-									<DropdownMenuCheckboxItem
-										key={column.id}
-										checked={column.getIsVisible()}
-										onCheckedChange={(checked) =>
-											column.toggleVisibility(!!checked)
-										}
-									>
-										{column.columnDef.meta?.label ?? column.id}
-									</DropdownMenuCheckboxItem>,
-								);
-								return items;
-							},
-							[],
-						)}
+						{table.getAllLeafColumns().reduce<ReactNode[]>((items, column) => {
+							if (!column.getCanHide()) return items;
+							items.push(
+								<DropdownMenuCheckboxItem
+									key={column.id}
+									checked={column.getIsVisible()}
+									onCheckedChange={(checked) =>
+										column.toggleVisibility(!!checked)
+									}
+								>
+									{column.columnDef.meta?.label ?? column.id}
+								</DropdownMenuCheckboxItem>,
+							);
+							return items;
+						}, [])}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
