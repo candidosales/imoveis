@@ -8,15 +8,23 @@ import { scrapers } from "#/server/scrapers";
 // CONTEXT.md decision log: teto fixo de R$700k em todas as Fontes.
 const MAX_PRICE_CENTS = 700_000 * 100;
 
-export async function runScrapeAndEnrich(): Promise<void> {
+export async function runScrapeAndEnrich(onlySource?: string): Promise<void> {
 	const startedAt = Date.now();
 	console.log(`[cron] iniciando coleta às ${new Date().toISOString()}`);
+
+	const targets = onlySource
+		? scrapers.filter((s) => s.source === onlySource)
+		: scrapers;
+	if (onlySource && targets.length === 0) {
+		console.error(`[cron] fonte desconhecida: ${onlySource}`);
+		return;
+	}
 
 	// Independent sources (different hosts, no shared state) — scrape them concurrently.
 	// Each listing is upserted as soon as its scraper finds it (via onListing),
 	// instead of being buffered until the whole source finishes.
 	const scraped = await Promise.all(
-		scrapers.map(async (scraper) => {
+		targets.map(async (scraper) => {
 			const seenIds = new Set<string>();
 			let newCount = 0;
 			try {
