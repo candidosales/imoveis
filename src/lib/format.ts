@@ -41,3 +41,7 @@ export function formatMinutes(min: number | null | undefined): string {
 	if (min === null || min === undefined) return "—";
 	return `${min} min`;
 }
+
+export function streetViewUrl(lat: number, lng: number): string {
+	return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=0&pitch=0&fov=80`;
+}

@@ -4,10 +4,15 @@ import {
 	Map as GoogleMap,
 	InfoWindow,
 } from "@vis.gl/react-google-maps";
-import { EyeOff, Heart } from "lucide-react";
+import { EyeOff, Heart, PersonStanding } from "lucide-react";
 import { useState } from "react";
-import { Button } from "#/components/ui/button";
-import { formatMinutes, formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
+import { Button, buttonVariants } from "#/components/ui/button";
+import {
+	formatMinutes,
+	formatPriceBRL,
+	SOURCE_LABELS,
+	streetViewUrl,
+} from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
 const CAUCAIA_CENTER = { lat: -3.7361, lng: -38.6531 };
@@ -113,6 +118,21 @@ export default function ListingsMap({
 									>
 										{active.title}
 									</a>
+									{active.addressPrecise && (
+										<a
+											href={streetViewUrl(active.lat, active.lng)}
+											target="_blank"
+											rel="noreferrer"
+											title="Ver no Street View"
+											className={buttonVariants({
+												variant: "ghost",
+												size: "icon",
+												className: "size-7 shrink-0",
+											})}
+										>
+											<PersonStanding className="size-4" />
+										</a>
+									)}
 									<Button
 										type="button"
 										variant="ghost"

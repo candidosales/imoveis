@@ -7,9 +7,9 @@ import {
 	rowSortingFeature,
 	tableFeatures,
 } from "@tanstack/react-table";
-import { ArrowUpDown, EyeOff, Heart } from "lucide-react";
+import { ArrowUpDown, EyeOff, Heart, PersonStanding } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
-import { Button } from "#/components/ui/button";
+import { Button, buttonVariants } from "#/components/ui/button";
 import {
 	Carousel,
 	CarouselContent,
@@ -30,6 +30,7 @@ import {
 	formatPricePerM2,
 	SOURCE_ICONS,
 	SOURCE_LABELS,
+	streetViewUrl,
 } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
@@ -179,6 +180,26 @@ export function createListingColumns({
 					/>
 				</Button>
 			),
+		},
+		{
+			id: "streetview",
+			header: "",
+			enableSorting: false,
+			enableHiding: false,
+			cell: ({ row }) =>
+				row.original.addressPrecise &&
+				row.original.lat !== null &&
+				row.original.lng !== null && (
+					<a
+						href={streetViewUrl(row.original.lat, row.original.lng)}
+						target="_blank"
+						rel="noreferrer"
+						title="Ver no Street View"
+						className={buttonVariants({ variant: "ghost", size: "icon" })}
+					>
+						<PersonStanding className="size-4 text-muted-foreground" />
+					</a>
+				),
 		},
 		{
 			id: "photo",
