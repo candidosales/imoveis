@@ -1,4 +1,4 @@
-import { ClientOnly } from "@tanstack/react-router";
+import { ClientOnly, getRouteApi } from "@tanstack/react-router";
 import {
 	EyeOff,
 	Heart,
@@ -8,14 +8,6 @@ import {
 	Minus,
 	Plus,
 } from "lucide-react";
-import {
-	parseAsArrayOf,
-	parseAsBoolean,
-	parseAsInteger,
-	parseAsString,
-	parseAsStringLiteral,
-	useQueryState,
-} from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ListingsTable } from "#/components/listings-table";
 import { Badge } from "#/components/ui/badge";
@@ -23,6 +15,7 @@ import { Button } from "#/components/ui/button";
 import { Slider } from "#/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group";
 import { formatPriceBRL, SOURCE_LABELS } from "#/lib/format";
+import { BEDROOMS_TODOS, type ListingsSearch } from "#/lib/listings-search";
 import type { ImovelType, ListingWithPlaces } from "#/server/db/types";
 import { setDismissed } from "#/server/functions/set-dismissed";
 import { setFavorite } from "#/server/functions/set-favorite";
@@ -34,57 +27,48 @@ const ListingsMap = lazy(() => import("#/components/listings-map"));
 type ViewMode = "tabela" | "mapa";
 type TypeFilter = ImovelType | "todos";
 
-const BEDROOMS_TODOS = "todos";
-
-const PRAIA_MAX_DEFAULT = 30;
-const COMODIDADE_MAX_DEFAULT = 15;
 const PRICE_CAP_CENTS = 700_000_00;
+
+const routeApi = getRouteApi("/");
 
 export function ListingsExplorer({
 	listings,
 }: {
 	listings: ListingWithPlaces[];
 }) {
-	const [view, setView] = useQueryState(
-		"view",
-		parseAsStringLiteral(["tabela", "mapa"] as const).withDefault("tabela"),
-	);
-	const [type, setType] = useQueryState(
-		"tipo",
-		parseAsStringLiteral(["todos", "casa", "terreno"] as const).withDefault(
-			"todos",
-		),
-	);
-	const [bedrooms, setBedrooms] = useQueryState(
-		"quartos",
-		parseAsString.withDefault(BEDROOMS_TODOS),
-	);
-	const [praiaMaxMin, setPraiaMaxMin] = useQueryState(
-		"praia",
-		parseAsInteger.withDefault(PRAIA_MAX_DEFAULT),
-	);
-	const [comodidadeMaxMin, setComodidadeMaxMin] = useQueryState(
-		"comodidade",
-		parseAsInteger.withDefault(COMODIDADE_MAX_DEFAULT),
-	);
+	const search = routeApi.useSearch();
+	const navigate = routeApi.useNavigate();
+	function updateSearch<K extends keyof ListingsSearch>(
+		key: K,
+		value: ListingsSearch[K],
+	) {
+		navigate({ search: (prev) => ({ ...prev, [key]: value }), replace: true });
+	}
+
+	const view = search.view;
+	const setView = (v: ViewMode) => updateSearch("view", v);
+	const type = search.tipo;
+	const setType = (v: TypeFilter) => updateSearch("tipo", v);
+	const bedrooms = search.quartos;
+	const setBedrooms = (v: string) => updateSearch("quartos", v);
+	const praiaMaxMin = search.praia;
+	const setPraiaMaxMin = (v: number) => updateSearch("praia", v);
+	const comodidadeMaxMin = search.comodidade;
+	const setComodidadeMaxMin = (v: number) => updateSearch("comodidade", v);
 
 	const sourceOptions = useMemo(() => {
 		return Array.from(new Set(listings.map((l) => l.source))).sort();
 	}, [listings]);
-	const [sources, setSources] = useQueryState(
-		"fontes",
-		parseAsArrayOf(parseAsString).withDefault(sourceOptions),
-	);
+	const sources = search.fontes ?? sourceOptions;
+	const setSources = (v: string[]) => updateSearch("fontes", v);
 
 	const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => {
 		const ids = new Set<string>();
 		for (const l of listings) if (l.favorite) ids.add(l.id);
 		return ids;
 	});
-	const [favoritesOnly, setFavoritesOnly] = useQueryState(
-		"favoritos",
-		parseAsBoolean.withDefault(false),
-	);
+	const favoritesOnly = search.favoritos;
+	const setFavoritesOnly = (v: boolean) => updateSearch("favoritos", v);
 
 	function toggleFavorite(id: string) {
 		setFavoriteIds((prev) => {
@@ -104,10 +88,8 @@ export function ListingsExplorer({
 		for (const l of listings) if (l.dismissed) ids.add(l.id);
 		return ids;
 	});
-	const [showDismissed, setShowDismissed] = useQueryState(
-		"descartados",
-		parseAsBoolean.withDefault(false),
-	);
+	const showDismissed = search.descartados;
+	const setShowDismissed = (v: boolean) => updateSearch("descartados", v);
 
 	function toggleDismiss(id: string) {
 		setDismissedIds((prev) => {
@@ -150,10 +132,8 @@ export function ListingsExplorer({
 		() => [priceBounds.min, priceBounds.max],
 		[priceBounds],
 	);
-	const [priceRange, setPriceRange] = useQueryState(
-		"preco",
-		parseAsArrayOf(parseAsInteger).withDefault(defaultPriceRange),
-	);
+	const priceRange = search.preco ?? defaultPriceRange;
+	const setPriceRange = (v: [number, number]) => updateSearch("preco", v);
 
 	const priceHistogram = useMemo(() => {
 		const span = priceBounds.max - priceBounds.min;
@@ -317,9 +297,9 @@ function ListingsFilterBar({
 	sources: string[];
 	setSources: (sources: string[]) => void;
 	favoritesOnly: boolean;
-	setFavoritesOnly: (updater: (v: boolean) => boolean) => void;
+	setFavoritesOnly: (v: boolean) => void;
 	showDismissed: boolean;
-	setShowDismissed: (updater: (v: boolean) => boolean) => void;
+	setShowDismissed: (v: boolean) => void;
 	filteredCount: number;
 	view: ViewMode;
 	setView: (view: ViewMode) => void;
@@ -409,7 +389,7 @@ function ListingsFilterBar({
 						type="button"
 						variant={favoritesOnly ? "default" : "outline"}
 						className="gap-1.5"
-						onClick={() => setFavoritesOnly((v) => !v)}
+						onClick={() => setFavoritesOnly(!favoritesOnly)}
 					>
 						<Heart className={favoritesOnly ? "size-4 fill-current" : "size-4"} />
 						Favoritos
@@ -424,7 +404,7 @@ function ListingsFilterBar({
 						type="button"
 						variant={showDismissed ? "default" : "outline"}
 						className="gap-1.5"
-						onClick={() => setShowDismissed((v) => !v)}
+						onClick={() => setShowDismissed(!showDismissed)}
 					>
 						<EyeOff className="size-4" />
 						Descartados

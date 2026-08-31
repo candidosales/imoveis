@@ -1,11 +1,12 @@
-import {
-	type ColumnVisibilityState,
-	flexRender,
-	type SortingState,
-	useTable,
+import type {
+	ColumnVisibilityState,
+	PaginationState,
+	SortingState,
 } from "@tanstack/react-table";
+import { flexRender, useTable } from "@tanstack/react-table";
+import { getRouteApi } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
 	createListingColumns,
 	listingsTableFeatures as features,
@@ -27,6 +28,10 @@ import {
 } from "#/components/ui/table";
 import type { ListingWithPlaces } from "#/server/db/types";
 
+const PAGE_SIZE = 25;
+
+const routeApi = getRouteApi("/");
+
 export function ListingsTable({
 	listings,
 	favoriteIds,
@@ -43,6 +48,28 @@ export function ListingsTable({
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnVisibility, setColumnVisibility] =
 		useState<ColumnVisibilityState>({});
+	const navigate = routeApi.useNavigate();
+	const page = routeApi.useSearch({ select: (s) => s.pagina });
+	function setPage(pagina: number) {
+		navigate({ search: (prev) => ({ ...prev, pagina }), replace: true });
+	}
+	const pagination = useMemo<PaginationState>(
+		() => ({ pageIndex: page - 1, pageSize: PAGE_SIZE }),
+		[page],
+	);
+	function onPaginationChange(
+		updater: PaginationState | ((old: PaginationState) => PaginationState),
+	) {
+		const next = typeof updater === "function" ? updater(pagination) : updater;
+		setPage(next.pageIndex + 1);
+	}
+
+	useEffect(() => {
+		const pageCount = Math.max(1, Math.ceil(listings.length / PAGE_SIZE));
+		if (page > pageCount) {
+			setPage(pageCount);
+		}
+	}, [listings.length, page]);
 
 	const columns = useMemo(
 		() =>
@@ -59,11 +86,12 @@ export function ListingsTable({
 		features,
 		data: listings,
 		columns,
-		state: { sorting, columnVisibility },
+		state: { sorting, columnVisibility, pagination },
 		onSortingChange: setSorting,
 		onColumnVisibilityChange: setColumnVisibility,
+		onPaginationChange,
+		autoResetPageIndex: false,
 		getRowId: (l) => l.id,
-		initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
 	});
 
 	return (

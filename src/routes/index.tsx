@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ListingsExplorer } from "#/components/listings-explorer";
+import { validateListingsSearch } from "#/lib/listings-search";
 import { getListings } from "#/server/functions/get-listings";
 
 export const Route = createFileRoute("/")({
+	validateSearch: validateListingsSearch,
 	loader: () => getListings(),
 	component: Home,
 });
