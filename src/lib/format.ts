@@ -5,6 +5,9 @@ export const SOURCE_LABELS: Record<string, string> = {
 	ergue: "Ergue",
 	habitat: "Habitat",
 	tavares: "Tavares",
+	facebook: "Facebook",
+	imovelweb: "Imovelweb",
+	lucianocavalcante: "Luciano Cavalcante",
 };
 
 export const SOURCE_ICONS: Record<string, string> = {
@@ -14,6 +17,9 @@ export const SOURCE_ICONS: Record<string, string> = {
 	ergue: "/icons/sources/ergue.webp",
 	habitat: "/icons/sources/habitat.webp",
 	tavares: "/icons/sources/tavares.png",
+	facebook: "/icons/sources/facebook.png",
+	imovelweb: "/icons/sources/imovelweb.png",
+	lucianocavalcante: "/icons/sources/lucianocavalcante.png",
 };
 
 export function formatPriceBRL(cents: number | null): string {

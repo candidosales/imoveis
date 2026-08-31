@@ -15,7 +15,8 @@
     "check": "biome check",
     "scrape": "bun run src/scripts/scrape-now.ts",
     "scrape:one": "bun run src/scripts/scrape-source.ts",
-    "imovelweb:auth": "bun run src/scripts/imovelweb-auth.ts"
+    "imovelweb:auth": "bun run src/scripts/imovelweb-auth.ts",
+    "facebook:auth": "bun run src/scripts/facebook-auth.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

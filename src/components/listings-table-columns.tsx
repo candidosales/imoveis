@@ -101,11 +101,14 @@ function ListingThumbnail({ listing }: { listing: ListingWithPlaces }) {
 				<Carousel>
 					<CarouselContent>
 						{listing.photos.map((photo, i) => (
-							<CarouselItem key={photo}>
+							<CarouselItem
+								key={photo}
+								className="flex items-center justify-center"
+							>
 								<img
 									src={photo}
 									alt={`${listing.title} — foto ${i + 1}`}
-									className="aspect-video w-full rounded-lg object-cover"
+									className="max-h-[75vh] w-full rounded-lg object-contain"
 									referrerPolicy="no-referrer"
 								/>
 							</CarouselItem>
