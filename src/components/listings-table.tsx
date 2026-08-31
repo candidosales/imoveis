@@ -1,4 +1,24 @@
-import { Heart } from "lucide-react";
+import {
+	type ColumnDef,
+	type ColumnVisibilityState,
+	columnVisibilityFeature,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	flexRender,
+	rowPaginationFeature,
+	rowSortingFeature,
+	type SortingState,
+	tableFeatures,
+	useTable,
+} from "@tanstack/react-table";
+import {
+	ArrowUpDown,
+	ChevronLeft,
+	ChevronRight,
+	Columns3,
+	Heart,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -15,6 +35,12 @@ import {
 	DialogTrigger,
 } from "#/components/ui/dialog";
 import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -30,6 +56,53 @@ import {
 } from "#/lib/format";
 import type { ListingWithPlaces } from "#/server/db/types";
 
+const features = tableFeatures({
+	rowSortingFeature,
+	columnVisibilityFeature,
+	rowPaginationFeature,
+	sortedRowModel: createSortedRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	columnMeta: {} as { label: string; cellClassName?: string },
+});
+
+type Features = typeof features;
+
+function areaOf(l: ListingWithPlaces) {
+	return l.type === "terreno"
+		? (l.lotAreaM2 ?? l.builtAreaM2)
+		: (l.builtAreaM2 ?? l.lotAreaM2);
+}
+
+function pricePerM2Of(l: ListingWithPlaces) {
+	const area = areaOf(l);
+	if (l.priceCents === null || area === null || area === 0) return null;
+	return l.priceCents / area;
+}
+
+function SortableHeader({
+	label,
+	column,
+}: {
+	label: string;
+	column: {
+		toggleSorting: (desc?: boolean) => void;
+		getIsSorted: () => false | "asc" | "desc";
+	};
+}) {
+	return (
+		<Button
+			type="button"
+			variant="ghost"
+			size="sm"
+			className="-ml-2.5 h-7 gap-1 px-2.5"
+			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+		>
+			{label}
+			<ArrowUpDown className="size-3.5" />
+		</Button>
+	);
+}
+
 export function ListingsTable({
 	listings,
 	favoriteIds,
@@ -39,121 +112,317 @@ export function ListingsTable({
 	favoriteIds: Set<string>;
 	onToggleFavorite: (id: string) => void;
 }) {
-	if (listings.length === 0) {
-		return (
-			<p className="p-8 text-center text-sm text-muted-foreground">
-				Nenhum imóvel encontrado com esses filtros.
-			</p>
-		);
-	}
+	const [sorting, setSorting] = useState<SortingState>([]);
+	const [columnVisibility, setColumnVisibility] =
+		useState<ColumnVisibilityState>({});
+
+	const columns = useMemo<ColumnDef<Features, ListingWithPlaces>[]>(
+		() => [
+			{
+				id: "favorite",
+				header: "",
+				enableSorting: false,
+				enableHiding: false,
+				cell: ({ row }) => (
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className="size-8"
+						onClick={() => onToggleFavorite(row.original.id)}
+					>
+						<Heart
+							className={
+								favoriteIds.has(row.original.id)
+									? "size-4 fill-red-500 text-red-500"
+									: "size-4"
+							}
+						/>
+					</Button>
+				),
+			},
+			{
+				id: "photo",
+				header: "Foto",
+				enableSorting: false,
+				cell: ({ row }) => <ListingThumbnail listing={row.original} />,
+				meta: { label: "Foto" },
+			},
+			{
+				id: "title",
+				accessorKey: "title",
+				header: ({ column }) => (
+					<SortableHeader label="Imóvel" column={column} />
+				),
+				cell: ({ row }) => (
+					<a
+						href={row.original.url}
+						target="_blank"
+						rel="noreferrer"
+						className="hover:underline"
+					>
+						{row.original.title}
+					</a>
+				),
+				meta: {
+					label: "Imóvel",
+					cellClassName: "max-w-64 truncate font-medium",
+				},
+			},
+			{
+				id: "type",
+				accessorKey: "type",
+				header: ({ column }) => <SortableHeader label="Tipo" column={column} />,
+				meta: { label: "Tipo" },
+				cell: ({ getValue }) => {
+					const type = getValue<ListingWithPlaces["type"]>();
+					return (
+						<Badge
+							variant="outline"
+							className={
+								type === "casa"
+									? "border-blue-200 bg-blue-50 text-blue-700"
+									: "border-amber-200 bg-amber-50 text-amber-700"
+							}
+						>
+							{type}
+						</Badge>
+					);
+				},
+			},
+			{
+				id: "price",
+				accessorFn: (l) => l.priceCents,
+				header: ({ column }) => (
+					<SortableHeader label="Preço" column={column} />
+				),
+				meta: { label: "Preço" },
+				cell: ({ getValue }) => formatPriceBRL(getValue<number | null>()),
+			},
+			{
+				id: "area",
+				accessorFn: areaOf,
+				header: ({ column }) => <SortableHeader label="Área" column={column} />,
+				meta: { label: "Área" },
+				cell: ({ getValue }) => formatAreaM2(getValue<number | null>()),
+			},
+			{
+				id: "pricePerM2",
+				accessorFn: pricePerM2Of,
+				header: ({ column }) => (
+					<SortableHeader label="Valor/m²" column={column} />
+				),
+				meta: { label: "Valor/m²" },
+				cell: ({ row }) =>
+					formatPricePerM2(row.original.priceCents, areaOf(row.original)),
+			},
+			{
+				id: "bedrooms",
+				accessorKey: "bedrooms",
+				header: ({ column }) => (
+					<SortableHeader label="Quartos" column={column} />
+				),
+				meta: { label: "Quartos" },
+				cell: ({ getValue }) => getValue<number | null>() ?? "—",
+			},
+			{
+				id: "neighborhood",
+				accessorKey: "neighborhood",
+				header: ({ column }) => (
+					<SortableHeader label="Bairro" column={column} />
+				),
+				meta: { label: "Bairro" },
+				cell: ({ getValue }) => getValue<string | null>() ?? "—",
+			},
+			{
+				id: "praia",
+				accessorFn: (l) => l.places.praia?.driveMinutes ?? null,
+				header: ({ column }) => (
+					<SortableHeader label="Praia (carro)" column={column} />
+				),
+				meta: { label: "Praia (carro)" },
+				cell: ({ getValue }) => formatMinutes(getValue<number | null>()),
+			},
+			{
+				id: "mercado",
+				accessorFn: (l) => l.places.mercado?.driveMinutes ?? null,
+				header: ({ column }) => (
+					<SortableHeader label="Mercado" column={column} />
+				),
+				meta: { label: "Mercado" },
+				cell: ({ getValue }) => formatMinutes(getValue<number | null>()),
+			},
+			{
+				id: "farmacia",
+				accessorFn: (l) => l.places.farmacia?.driveMinutes ?? null,
+				header: ({ column }) => (
+					<SortableHeader label="Farmácia" column={column} />
+				),
+				meta: { label: "Farmácia" },
+				cell: ({ getValue }) => formatMinutes(getValue<number | null>()),
+			},
+			{
+				id: "hospital",
+				accessorFn: (l) => l.places.hospital?.driveMinutes ?? null,
+				header: ({ column }) => (
+					<SortableHeader label="Hospital" column={column} />
+				),
+				meta: { label: "Hospital" },
+				cell: ({ getValue }) => formatMinutes(getValue<number | null>()),
+			},
+			{
+				id: "padaria",
+				accessorFn: (l) => l.places.padaria?.driveMinutes ?? null,
+				header: ({ column }) => (
+					<SortableHeader label="Padaria" column={column} />
+				),
+				meta: { label: "Padaria" },
+				cell: ({ getValue }) => formatMinutes(getValue<number | null>()),
+			},
+			{
+				id: "source",
+				accessorKey: "source",
+				header: ({ column }) => (
+					<SortableHeader label="Fonte" column={column} />
+				),
+				meta: { label: "Fonte" },
+				cell: ({ getValue }) => (
+					<span className="text-xs text-muted-foreground">
+						{getValue<string>()}
+					</span>
+				),
+			},
+		],
+		[favoriteIds, onToggleFavorite],
+	);
+
+	const table = useTable({
+		features,
+		data: listings,
+		columns,
+		state: { sorting, columnVisibility },
+		onSortingChange: setSorting,
+		onColumnVisibilityChange: setColumnVisibility,
+		getRowId: (l) => l.id,
+		initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
+	});
 
 	return (
-		<div className="rounded-lg border">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead />
-						<TableHead>Foto</TableHead>
-						<TableHead>Imóvel</TableHead>
-						<TableHead>Tipo</TableHead>
-						<TableHead>Preço</TableHead>
-						<TableHead>Área</TableHead>
-						<TableHead>Valor/m²</TableHead>
-						<TableHead>Quartos</TableHead>
-						<TableHead>Bairro</TableHead>
-						<TableHead>Praia (carro)</TableHead>
-						<TableHead>Mercado</TableHead>
-						<TableHead>Farmácia</TableHead>
-						<TableHead>Hospital</TableHead>
-						<TableHead>Padaria</TableHead>
-						<TableHead>Fonte</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{listings.map((l) => (
-						<TableRow key={l.id}>
-							<TableCell>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									className="size-8"
-									onClick={() => onToggleFavorite(l.id)}
-								>
-									<Heart
-										className={
-											favoriteIds.has(l.id)
-												? "size-4 fill-red-500 text-red-500"
-												: "size-4"
-										}
-									/>
-								</Button>
-							</TableCell>
-							<TableCell>
-								<ListingThumbnail listing={l} />
-							</TableCell>
-							<TableCell className="max-w-64 truncate font-medium">
-								<a
-									href={l.url}
-									target="_blank"
-									rel="noreferrer"
-									className="hover:underline"
-								>
-									{l.title}
-								</a>
-							</TableCell>
-							<TableCell>
-								<Badge
-									variant="outline"
-									className={
-										l.type === "casa"
-											? "border-blue-200 bg-blue-50 text-blue-700"
-											: "border-amber-200 bg-amber-50 text-amber-700"
+		<div className="flex flex-col gap-3">
+			<div className="flex justify-end">
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						render={
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="gap-1.5"
+							>
+								<Columns3 className="size-4" />
+								Colunas
+							</Button>
+						}
+					/>
+					<DropdownMenuContent align="end">
+						{table
+							.getAllLeafColumns()
+							.filter((column) => column.getCanHide())
+							.map((column) => (
+								<DropdownMenuCheckboxItem
+									key={column.id}
+									checked={column.getIsVisible()}
+									onCheckedChange={(checked) =>
+										column.toggleVisibility(!!checked)
 									}
 								>
-									{l.type}
-								</Badge>
-							</TableCell>
-							<TableCell>{formatPriceBRL(l.priceCents)}</TableCell>
-							<TableCell>
-								{formatAreaM2(
-									l.type === "terreno"
-										? (l.lotAreaM2 ?? l.builtAreaM2)
-										: (l.builtAreaM2 ?? l.lotAreaM2),
-								)}
-							</TableCell>
-							<TableCell>
-								{formatPricePerM2(
-									l.priceCents,
-									l.type === "terreno"
-										? (l.lotAreaM2 ?? l.builtAreaM2)
-										: (l.builtAreaM2 ?? l.lotAreaM2),
-								)}
-							</TableCell>
-							<TableCell>{l.bedrooms ?? "—"}</TableCell>
-							<TableCell>{l.neighborhood ?? "—"}</TableCell>
-							<TableCell>
-								{formatMinutes(l.places.praia?.driveMinutes)}
-							</TableCell>
-							<TableCell>
-								{formatMinutes(l.places.mercado?.driveMinutes)}
-							</TableCell>
-							<TableCell>
-								{formatMinutes(l.places.farmacia?.driveMinutes)}
-							</TableCell>
-							<TableCell>
-								{formatMinutes(l.places.hospital?.driveMinutes)}
-							</TableCell>
-							<TableCell>
-								{formatMinutes(l.places.padaria?.driveMinutes)}
-							</TableCell>
-							<TableCell className="text-xs text-muted-foreground">
-								{l.source}
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
+									{column.columnDef.meta?.label ?? column.id}
+								</DropdownMenuCheckboxItem>
+							))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+
+			<div className="rounded-lg border">
+				<Table>
+					<TableHeader>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<TableHead key={header.id}>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
+									</TableHead>
+								))}
+							</TableRow>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="h-24 whitespace-normal text-center text-sm text-muted-foreground"
+								>
+									Nenhum imóvel encontrado com esses filtros.
+								</TableCell>
+							</TableRow>
+						) : (
+							table.getRowModel().rows.map((row) => (
+								<TableRow key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell
+											key={cell.id}
+											className={cell.column.columnDef.meta?.cellClassName}
+										>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
+
+			<div className="flex items-center justify-between">
+				<span className="text-sm text-muted-foreground">
+					{table.getRowModel().rows.length} de {listings.length} imóveis
+				</span>
+				<div className="flex items-center gap-2">
+					<span className="text-sm text-muted-foreground">
+						Página {table.state.pagination.pageIndex + 1} de{" "}
+						{Math.max(1, table.getPageCount())}
+					</span>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						className="size-8"
+						disabled={!table.getCanPreviousPage()}
+						onClick={() => table.previousPage()}
+					>
+						<ChevronLeft className="size-4" />
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						className="size-8"
+						disabled={!table.getCanNextPage()}
+						onClick={() => table.nextPage()}
+					>
+						<ChevronRight className="size-4" />
+					</Button>
+				</div>
+			</div>
 		</div>
 	);
 }
