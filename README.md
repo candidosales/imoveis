@@ -53,6 +53,8 @@ Cron diário (`src/server/cron/schedule.ts`, `Bun.cron`, 06:00) ainda não está
 | Viva Real | Crawlee/Playwright (Cloudflare managed challenge) | ✅ |
 | OLX | Crawlee/Playwright (JSON via RSC/Next.js) | ✅ |
 | Imovelweb | Crawlee/Playwright + cookie `cf_clearance` manual (ver abaixo) | ✅ |
+| Luciano Cavalcante Imóveis | sitemap + Crawlee/Playwright (JSON-LD `RealEstateListing`) | ✅ |
+| Facebook Marketplace | Crawlee/Playwright + sessão logada via cookie manual (ver abaixo) | ✅ |
 | imoveiscaucaia.com.br | — | ❌ robots.txt bloqueia crawlers não-nomeados |
 | Inov9 Imóveis | — | ❌ domínio morto/errado |
 
@@ -65,6 +67,16 @@ bun run imovelweb:auth
 ```
 
 Pede pra colar 2 valores (extraídos do devtools do seu browser normal, depois de resolver o Cloudflare manualmente): o cookie `cf_clearance` e seu `navigator.userAgent`. Salva `data/imovelweb-auth.json` (gitignored) — cookie e UA usados juntos pelo scraper, pois Cloudflare vincula o cookie ao UA que resolveu o desafio. Sem TTL documentado pro `cf_clearance` — quando expirar, a fonte só para de trazer novidades (cron loga o erro, sem alerta externo). Rodar o comando de novo se `imovelweb` sumir do log do cron.
+
+### Facebook Marketplace: sessão manual
+
+Facebook Marketplace não tem API pública nem categoria/URL de busca escopada por cidade sem ID interno — a fonte busca por texto livre ("casa/terreno à venda caucaia ce") e descarta resultado cujo texto da página não mencione Caucaia. Login via Playwright é sempre detectado como automação (checkpoint/2FA/ban), então a sessão é sempre manual:
+
+```bash
+bun run facebook:auth
+```
+
+Pede pra colar o header `Cookie` completo (não só `c_user`/`xs` — Facebook valida várias cookies juntas), copiado do devtools de uma sessão normal já logada. Salva `data/facebook-auth.json` (gitignored), reinjetado a cada run. Sem TTL documentado — logout em qualquer lugar invalida a sessão; rodar o comando de novo se `facebook` sumir do log do cron.
 
 Detalhes e decisões de design: [CONTEXT.md](CONTEXT.md).
 
