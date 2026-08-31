@@ -1,5 +1,6 @@
 import { ergueScraper } from "#/server/scrapers/ergue";
 import { habitatScraper } from "#/server/scrapers/habitat";
+import { imovelwebScraper } from "#/server/scrapers/imovelweb";
 import { lucianoCavalcanteScraper } from "#/server/scrapers/lucianocavalcante";
 import { olxScraper } from "#/server/scrapers/olx";
 import { tavaresScraper } from "#/server/scrapers/tavares";
@@ -15,4 +16,5 @@ export const scrapers: SiteScraper[] = [
 	vivarealScraper,
 	olxScraper,
 	lucianoCavalcanteScraper,
+	imovelwebScraper,
 ];

@@ -52,9 +52,19 @@ Cron diário (`src/server/cron/schedule.ts`, `Bun.cron`, 06:00) ainda não está
 | ZAP Imóveis | Crawlee/Playwright (Cloudflare managed challenge) | ✅ |
 | Viva Real | Crawlee/Playwright (Cloudflare managed challenge) | ✅ |
 | OLX | Crawlee/Playwright (JSON via RSC/Next.js) | ✅ |
+| Imovelweb | Crawlee/Playwright + cookie `cf_clearance` manual (ver abaixo) | ✅ |
 | imoveiscaucaia.com.br | — | ❌ robots.txt bloqueia crawlers não-nomeados |
-| Imovelweb | — | ❌ Cloudflare managed challenge bloqueia fetch, webview e WebFetch |
 | Inov9 Imóveis | — | ❌ domínio morto/errado |
+
+### Imovelweb: autenticação manual
+
+Imovelweb usa Turnstile interativo (`cf-mitigated: challenge`) — mais estrito que o managed challenge que ZAP/Viva Real/OLX passam sozinhos; Crawlee sozinho (com ou sem `useFingerprints`) toma 403 em <500ms, antes até do desafio renderizar. Pior: o desafio nem passa num Playwright headed com clique humano — o browser é CDP-automatizado (`navigator.webdriver`), Turnstile detecta e o spinner nunca sai de "Verifying you are human". Só um browser genuinamente não-automatizado resolve. Então a saída é resolver 1x no seu browser normal e colar o resultado:
+
+```bash
+bun run imovelweb:auth
+```
+
+Pede pra colar 2 valores (extraídos do devtools do seu browser normal, depois de resolver o Cloudflare manualmente): o cookie `cf_clearance` e seu `navigator.userAgent`. Salva `data/imovelweb-auth.json` (gitignored) — cookie e UA usados juntos pelo scraper, pois Cloudflare vincula o cookie ao UA que resolveu o desafio. Sem TTL documentado pro `cf_clearance` — quando expirar, a fonte só para de trazer novidades (cron loga o erro, sem alerta externo). Rodar o comando de novo se `imovelweb` sumir do log do cron.
 
 Detalhes e decisões de design: [CONTEXT.md](CONTEXT.md).
 
